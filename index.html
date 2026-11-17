@@ -12,7 +12,7 @@
       href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@500;600&amp;display=swap"
       rel="stylesheet"
     >
-    <link rel="stylesheet" href="calculadora-media-facens.css?v=7">
+    <link rel="stylesheet" href="calculadora-media-facens.css?v=12">
     <script>
       // Abre sempre no tema do sistema, antes de desenhar a página (sem piscar).
       document.documentElement.dataset.theme =
@@ -45,6 +45,15 @@
             >
           </label>
           <button type="button" id="clear">Limpar notas</button>
+          <button type="button" id="open-pesos" class="pesos-btn" aria-haspopup="dialog">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/>
+              <circle cx="16" cy="6" r="2"/>
+              <circle cx="10" cy="12" r="2"/>
+              <circle cx="18" cy="18" r="2"/>
+            </svg>
+            Pesos
+          </button>
           <button
             type="button"
             id="theme"
@@ -69,13 +78,78 @@
         aria-label="Matérias"
       ></section>
 
-      <footer class="note">
-        Pesos: AC1 15% · AC2 30% · AG 10% · AF 45%. A média mínima padrão é
-        6,0; confira o Plano de Ensino da disciplina. As notas ficam salvas
-        só neste navegador.
-      </footer>
     </main>
 
-    <script src="calculadora-media-facens.js?v=7" defer></script>
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-top">
+          <img class="brand footer-logo" src="facens-logo.png" alt="Facens">
+          <p class="footer-pesos">
+            <span>Pesos</span>
+            <span id="pesos-texto">AC1 15% · AC2 30% · AG 10% · AF 45%</span>
+          </p>
+        </div>
+
+        <p class="footer-text">
+          A média mínima padrão é 6,0 — confira o Plano de Ensino de cada
+          disciplina. Suas notas ficam salvas só neste navegador.
+        </p>
+
+        <div class="footer-bottom">
+          <span>
+            © <span id="ano">2026</span> Pedro Henrique Marcelino ·
+            Ferramenta não oficial
+          </span>
+        </div>
+      </div>
+    </footer>
+
+    <dialog id="pesos-dialog" class="dialog" aria-labelledby="pesos-titulo">
+      <form method="dialog" id="pesos-form" novalidate>
+        <div class="dialog-head">
+          <h2 id="pesos-titulo">Pesos das notas</h2>
+          <button type="button" class="icon-btn" id="pesos-fechar" aria-label="Fechar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18"/>
+            </svg>
+          </button>
+        </div>
+
+        <p class="sub">
+          Ajuste a porcentagem de cada avaliação. A soma precisa dar 100%.
+        </p>
+
+        <div class="pesos-grid" id="pesos-campos"></div>
+
+        <div class="pesos-total" id="pesos-total">Total: 100%</div>
+
+        <!-- Troque o "#" abaixo pelo link do arquivo da Facens com os pesos. -->
+        <a
+          class="doc-link"
+          id="link-facens"
+          href="#"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+            <path d="M14 3v6h6M8 13h8M8 17h5"/>
+          </svg>
+          <span>
+            Ver pesos oficiais da Facens
+            <small id="link-facens-aviso">Link em breve</small>
+          </span>
+        </a>
+
+        <div class="dialog-actions">
+          <button type="button" id="pesos-padrao" class="ghost">Restaurar padrão</button>
+          <span class="spacer"></span>
+          <button type="button" id="pesos-cancelar">Cancelar</button>
+          <button type="submit" id="pesos-salvar" class="primary">Salvar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="calculadora-media-facens.js?v=12" defer></script>
   </body>
 </html>

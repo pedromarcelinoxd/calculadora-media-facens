@@ -1,10 +1,13 @@
 (() => {
-  const PESOS = {
+  const PESOS_PADRAO = {
     ac1: 0.15,
     ac2: 0.30,
     ag: 0.10,
     af: 0.45,
   };
+
+  // Pesos em uso (podem ser alterados no pop-up "Pesos").
+  const PESOS = { ...PESOS_PADRAO };
 
   const IDS = Object.keys(PESOS);
   const CHAVE = "calc-media-facens-v2";
@@ -37,6 +40,18 @@
     dadosSalvos = JSON.parse(localStorage.getItem(CHAVE) || "null");
   } catch {
     dadosSalvos = null;
+  }
+
+  // Carrega pesos salvos, se forem válidos (cada um de 0 a 1 e somando 100%).
+  const pesosSalvos = dadosSalvos?.pesos;
+  if (
+    pesosSalvos &&
+    IDS.every((id) => Number.isFinite(pesosSalvos[id]) && pesosSalvos[id] >= 0 && pesosSalvos[id] <= 1) &&
+    Math.abs(IDS.reduce((t, id) => t + pesosSalvos[id], 0) - 1) < 1e-6
+  ) {
+    IDS.forEach((id) => {
+      PESOS[id] = pesosSalvos[id];
+    });
   }
 
   const materias = Array.from({ length: 6 }, (_, indice) => ({
@@ -75,7 +90,7 @@
             <div class="grade">
               <label for="${id}-${indice}">
                 ${rotulos[id]}
-                <small>${Math.round(PESOS[id] * 100)}%</small>
+                <small data-peso="${id}"></small>
               </label>
               <input
                 type="text"
@@ -121,7 +136,7 @@
     try {
       localStorage.setItem(
         CHAVE,
-        JSON.stringify({ subjects, meta: elemento("meta").value }),
+        JSON.stringify({ subjects, meta: elemento("meta").value, pesos: PESOS }),
       );
     } catch {
       // A calculadora continua funcionando se o navegador bloquear o armazenamento.
@@ -202,7 +217,7 @@
         if (necessaria > 10) {
           definirEstado("bad");
           status.textContent = "Meta fora de alcance";
-          avisoAF.textContent = `Máximo: ${formatar(media + 4.5)}`;
+          avisoAF.textContent = `Máximo: ${formatar(media + 10 * PESOS.af)}`;
           return;
         }
 
@@ -247,6 +262,129 @@
     calcularMedias();
     elemento("ac1-0").focus();
   });
+
+  // ---------- Pop-up de pesos ----------
+
+  const formatarPorcentagem = (peso) =>
+    String(Math.round(peso * 10000) / 100).replace(".", ",");
+
+  function mostrarPesos() {
+    document.querySelectorAll("[data-peso]").forEach((el) => {
+      el.textContent = `${formatarPorcentagem(PESOS[el.dataset.peso])}%`;
+    });
+
+    elemento("pesos-texto").textContent = IDS.map(
+      (id) => `${rotulos[id]} ${formatarPorcentagem(PESOS[id])}%`,
+    ).join(" · ");
+  }
+
+  const dialogo = elemento("pesos-dialog");
+
+  elemento("pesos-campos").innerHTML = IDS.map((id) => `
+    <div class="peso-campo">
+      <label for="peso-${id}">${rotulos[id]}</label>
+      <input
+        type="text"
+        inputmode="decimal"
+        id="peso-${id}"
+        data-peso-input="${id}"
+        autocomplete="off"
+      >
+      <span aria-hidden="true">%</span>
+    </div>
+  `).join("");
+
+  const camposPeso = IDS.map((id) => elemento(`peso-${id}`));
+
+  function lerPesosDoDialogo() {
+    return IDS.map((id, i) => {
+      const texto = camposPeso[i].value.trim().replace(",", ".");
+      const numero = texto === "" ? NaN : Number(texto);
+      const valido = Number.isFinite(numero) && numero >= 0 && numero <= 100;
+      camposPeso[i].classList.toggle("invalid", !valido);
+      return valido ? numero : NaN;
+    });
+  }
+
+  function validarDialogo() {
+    const valores = lerPesosDoDialogo();
+    const algumInvalido = valores.some(Number.isNaN);
+    const soma = valores.reduce((t, v) => t + (Number.isNaN(v) ? 0 : v), 0);
+    const somaCerta = Math.abs(soma - 100) < 0.01;
+    const total = elemento("pesos-total");
+
+    total.classList.toggle("erro", algumInvalido || !somaCerta);
+    total.textContent = algumInvalido
+      ? "Use valores de 0 a 100"
+      : somaCerta
+        ? "Total: 100%"
+        : `Total: ${formatarPorcentagem(soma / 100)}% · precisa dar 100%`;
+
+    elemento("pesos-salvar").disabled = algumInvalido || !somaCerta;
+    return !algumInvalido && somaCerta ? valores : null;
+  }
+
+  function preencherDialogo(pesos) {
+    IDS.forEach((id, i) => {
+      camposPeso[i].value = formatarPorcentagem(pesos[id]);
+    });
+    validarDialogo();
+  }
+
+  // Link do arquivo da Facens: enquanto o href for "#", aparece como "Link em breve".
+  const linkFacens = elemento("link-facens");
+  const linkPendente = () => {
+    const href = linkFacens.getAttribute("href") || "";
+    return href === "" || href === "#";
+  };
+
+  if (linkPendente()) {
+    linkFacens.setAttribute("aria-disabled", "true");
+    linkFacens.addEventListener("click", (e) => e.preventDefault());
+  } else {
+    elemento("link-facens-aviso").textContent = "";
+  }
+
+  elemento("open-pesos").addEventListener("click", () => {
+    preencherDialogo(PESOS);
+    dialogo.showModal();
+  });
+
+  elemento("ano").textContent = new Date().getFullYear();
+
+  camposPeso.forEach((campo) => campo.addEventListener("input", validarDialogo));
+
+  elemento("pesos-padrao").addEventListener("click", () => {
+    preencherDialogo(PESOS_PADRAO);
+  });
+
+  ["pesos-cancelar", "pesos-fechar"].forEach((id) => {
+    elemento(id).addEventListener("click", () => dialogo.close());
+  });
+
+  // Fechar clicando fora da caixa.
+  dialogo.addEventListener("click", (e) => {
+    if (e.target === dialogo) dialogo.close();
+  });
+
+  elemento("pesos-form").addEventListener("submit", (e) => {
+    const valores = validarDialogo();
+
+    if (!valores) {
+      e.preventDefault();
+      return;
+    }
+
+    IDS.forEach((id, i) => {
+      PESOS[id] = valores[i] / 100;
+    });
+
+    mostrarPesos();
+    salvarDados();
+    calcularMedias();
+  });
+
+  mostrarPesos();
 
   const raiz = document.documentElement;
   const corTema = { light: "#e6e9ee", dark: "#0b0e13" };
