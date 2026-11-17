@@ -45,10 +45,10 @@
   }));
 
   const rotulos = {
-    ac1: "AC1 · 15%",
-    ac2: "AC2 · 30%",
-    ag: "AG · 10%",
-    af: "AF · 45%",
+    ac1: "AC1",
+    ac2: "AC2",
+    ag: "AG",
+    af: "AF",
   };
 
   elemento("subjects").innerHTML = materias
@@ -63,9 +63,11 @@
             data-name="${indice}"
             value=""
           >
-          <span class="avg" id="avg-${indice}">
-            0,00 <small>/ 10</small>
-          </span>
+          <span class="avg" id="avg-${indice}">0,00<small>/10</small></span>
+        </div>
+
+        <div class="bar" aria-hidden="true">
+          <span id="bar-${indice}"></span><i></i>
         </div>
 
         <div class="grades">
@@ -73,7 +75,7 @@
             <div class="grade">
               <label for="${id}-${indice}">
                 ${rotulos[id]}
-                <small>${id === "af" ? "Avaliação Final" : "Avaliação"}</small>
+                <small>${Math.round(PESOS[id] * 100)}%</small>
               </label>
               <input
                 type="text"
@@ -134,6 +136,8 @@
 
     if (metaInvalida) meta = 6;
 
+    document.documentElement.style.setProperty("--meta", `${meta * 10}%`);
+
     materias.forEach((_, indice) => {
       const notas = {};
       let existeNotaInvalida = false;
@@ -155,7 +159,8 @@
         0,
       );
 
-      elemento(`avg-${indice}`).firstChild.textContent = `${formatar(media)} `;
+      elemento(`avg-${indice}`).firstChild.textContent = formatar(media);
+      elemento(`bar-${indice}`).style.width = `${media * 10}%`;
 
       const status = elemento(`status-${indice}`);
       const avisoAF = elemento(`required-${indice}`);
@@ -163,10 +168,17 @@
         (id) => notas[id] !== null,
       ).length;
 
+      const cartao = status.closest(".card");
+      const definirEstado = (estado) => {
+        cartao.dataset.state = estado;
+      };
+
       status.className = "status";
       avisoAF.textContent = "";
+      definirEstado("");
 
       if (existeNotaInvalida) {
+        definirEstado("bad");
         status.textContent = "Use notas de 0 a 10";
         return;
       }
@@ -174,7 +186,7 @@
       if (quantidadePreenchida === IDS.length) {
         const aprovado = media >= meta - 1e-9;
 
-        status.classList.add(aprovado ? "ok" : "bad");
+        definirEstado(aprovado ? "ok" : "bad");
         status.textContent = aprovado
           ? "Aprovado por nota"
           : "Abaixo da média";
@@ -188,21 +200,21 @@
         const necessaria = Math.max(0, (meta - media) / PESOS.af);
 
         if (necessaria > 10) {
-          status.classList.add("bad");
+          definirEstado("bad");
           status.textContent = "Meta fora de alcance";
           avisoAF.textContent = `Máximo: ${formatar(media + 4.5)}`;
           return;
         }
 
         if (necessaria === 0) {
-          status.classList.add("ok");
+          definirEstado("ok");
           status.textContent = "Meta já garantida";
           return;
         }
 
         const notaNecessaria = Math.ceil(necessaria * 100) / 100;
 
-        status.classList.add("warn");
+        definirEstado("warn");
         status.textContent = "Falta a AF";
         avisoAF.textContent = `Precisa de ${formatar(notaNecessaria)} na AF`;
         return;
@@ -234,6 +246,29 @@
     salvarDados();
     calcularMedias();
     elemento("ac1-0").focus();
+  });
+
+  const raiz = document.documentElement;
+  const corTema = { light: "#f6f7f9", dark: "#0b0e13" };
+
+  function aplicarTema(tema) {
+    raiz.dataset.theme = tema;
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", corTema[tema]);
+  }
+
+  aplicarTema(raiz.dataset.theme === "dark" ? "dark" : "light");
+
+  elemento("theme").addEventListener("click", () => {
+    const novoTema = raiz.dataset.theme === "dark" ? "light" : "dark";
+    aplicarTema(novoTema);
+
+    try {
+      localStorage.setItem("calc-tema", novoTema);
+    } catch {
+      // Sem armazenamento, o tema só vale até recarregar a página.
+    }
   });
 
   calcularMedias();
