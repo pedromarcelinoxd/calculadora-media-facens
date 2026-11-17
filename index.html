@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#f6f7f9">
+    <meta name="theme-color" content="#e6e9ee">
     <title>Calculadora de Média Facens · 6 matérias</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,17 +12,11 @@
       href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@500;600&amp;display=swap"
       rel="stylesheet"
     >
-    <link rel="stylesheet" href="calculadora-media-facens.css?v=5">
+    <link rel="stylesheet" href="calculadora-media-facens.css?v=7">
     <script>
-      // Aplica o tema antes de desenhar a página, para não piscar.
-      (() => {
-        let tema = null;
-        try { tema = localStorage.getItem("calc-tema"); } catch {}
-        if (tema !== "light" && tema !== "dark") {
-          tema = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-        }
-        document.documentElement.dataset.theme = tema;
-      })();
+      // Abre sempre no tema do sistema, antes de desenhar a página (sem piscar).
+      document.documentElement.dataset.theme =
+        matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     </script>
   </head>
 
@@ -82,6 +76,6 @@
       </footer>
     </main>
 
-    <script src="calculadora-media-facens.js?v=5" defer></script>
+    <script src="calculadora-media-facens.js?v=7" defer></script>
   </body>
 </html>

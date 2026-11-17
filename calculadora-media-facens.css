@@ -1,24 +1,26 @@
 :root {
   color-scheme: light;
-  --bg: #f6f7f9;
-  --surface: #ffffff;
-  --field: #f1f3f6;
+  --bg: #e6e9ee;
+  --surface: #f3f5f8;
+  --field: #e2e6ec;
   --fg: #0e1621;
-  --muted: #6b7684;
-  --line: #e4e7ec;
+  --muted: #5d6877;
+  --line: #d2d8e0;
   --accent: #0057a3;
-  --accent-soft: #e8f1fb;
-  --track: #eceff3;
-  --ok: #138a4a;
-  --ok-soft: #e6f5ec;
-  --bad: #c8372d;
-  --bad-soft: #fcebea;
-  --warn: #a86400;
-  --warn-soft: #fdf3e2;
-  --shadow: 0 1px 2px rgb(14 22 33 / 0.04), 0 8px 24px -12px rgb(14 22 33 / 0.08);
+  --accent-soft: #d9e6f5;
+  --track: #d9dee6;
+  --shadow: 0 1px 2px rgb(14 22 33 / 0.05), 0 8px 24px -12px rgb(14 22 33 / 0.12);
   --sans: "Geist", "Segoe UI", system-ui, sans-serif;
   --mono: "Geist Mono", Consolas, monospace;
   --radius: 16px;
+
+  /* Cores de status: iguais nos dois temas */
+  --ok: #22a45d;
+  --ok-soft: rgb(34 164 93 / 0.16);
+  --bad: #e5484d;
+  --bad-soft: rgb(229 72 77 / 0.15);
+  --warn: #e0961a;
+  --warn-soft: rgb(224 150 26 / 0.17);
 }
 
 /* Tema escuro: segue o sistema, a menos que o botão force claro/escuro */
@@ -34,12 +36,6 @@
     --accent: #5aa9ff;
     --accent-soft: #14253a;
     --track: #1e242e;
-    --ok: #4ccb84;
-    --ok-soft: #12291d;
-    --bad: #ff7a70;
-    --bad-soft: #2e1614;
-    --warn: #f0b24a;
-    --warn-soft: #2d2210;
     --shadow: none;
   }
 
@@ -60,12 +56,6 @@
   --accent: #5aa9ff;
   --accent-soft: #14253a;
   --track: #1e242e;
-  --ok: #4ccb84;
-  --ok-soft: #12291d;
-  --bad: #ff7a70;
-  --bad-soft: #2e1614;
-  --warn: #f0b24a;
-  --warn-soft: #2d2210;
   --shadow: none;
 }
 
@@ -142,7 +132,8 @@ h1 {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 4px 4px 4px 14px;
+  height: 42px;
+  padding: 0 4px 0 14px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--surface);
@@ -154,13 +145,16 @@ h1 {
 
 .meta input {
   width: 64px !important;
-  padding: 6px;
+  height: 32px;
+  padding: 0 6px;
+  border-radius: 8px;
   font-size: 15px;
 }
 
 button {
   height: 42px;
   padding: 0 16px;
+  box-sizing: border-box;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--surface);

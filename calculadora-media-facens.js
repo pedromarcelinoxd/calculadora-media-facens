@@ -249,7 +249,7 @@
   });
 
   const raiz = document.documentElement;
-  const corTema = { light: "#f6f7f9", dark: "#0b0e13" };
+  const corTema = { light: "#e6e9ee", dark: "#0b0e13" };
 
   function aplicarTema(tema) {
     raiz.dataset.theme = tema;
@@ -260,15 +260,14 @@
 
   aplicarTema(raiz.dataset.theme === "dark" ? "dark" : "light");
 
+  // O botão troca o tema só nesta visita; ao abrir de novo, volta ao do sistema.
   elemento("theme").addEventListener("click", () => {
-    const novoTema = raiz.dataset.theme === "dark" ? "light" : "dark";
-    aplicarTema(novoTema);
+    aplicarTema(raiz.dataset.theme === "dark" ? "light" : "dark");
+  });
 
-    try {
-      localStorage.setItem("calc-tema", novoTema);
-    } catch {
-      // Sem armazenamento, o tema só vale até recarregar a página.
-    }
+  // Se o usuário mudar o tema do sistema com a página aberta, acompanha.
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+    aplicarTema(e.matches ? "dark" : "light");
   });
 
   calcularMedias();
