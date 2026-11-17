@@ -1240,41 +1240,76 @@
     dialogoImport.dataset.etapa = etapa;
   }
 
-  /** O print tem fundo escuro (tema escuro do app)? */
-  function fundoEscuro(bitmap) {
-    const c = document.createElement("canvas");
-    c.width = 48;
-    c.height = 96;
-    const ctx = c.getContext("2d");
-    ctx.drawImage(bitmap, 0, 0, c.width, c.height);
-    const px = ctx.getImageData(0, 0, c.width, c.height).data;
-    let soma = 0;
-    for (let i = 0; i < px.length; i += 4) soma += 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
-    return soma / (px.length / 4) < 110;
+  /** Abre a imagem de um jeito que funciona em todos os navegadores (inclusive Safari do iPhone). */
+  async function abrirImagem(arquivo) {
+    if (window.createImageBitmap) {
+      try {
+        return await createImageBitmap(arquivo);
+      } catch {
+        // Alguns celulares não suportam; tenta pelo <img> abaixo.
+      }
+    }
+    const url = URL.createObjectURL(arquivo);
+    try {
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+      return img;
+    } finally {
+      URL.revokeObjectURL(url);
+    }
   }
+
+  const larguraDe = (img) => img.naturalWidth || img.width;
+  const alturaDe = (img) => img.naturalHeight || img.height;
 
   /**
-   * Amplia, passa para tons de cinza e, se o print for do tema escuro, inverte as
-   * cores (texto escuro em fundo claro): o OCR erra bem menos assim.
+   * Prepara o print para o OCR: ajusta o tamanho (sem passar do que a memória do
+   * celular aguenta), passa para tons de cinza, aumenta o contraste e, se o print
+   * for do tema escuro, inverte as cores. Feito pixel a pixel porque o Safari
+   * não suporta filtros no canvas.
    */
-  async function prepararImagem(arquivo) {
-    const bitmap = await createImageBitmap(arquivo);
-    const escala = Math.min(3, Math.max(1, 1800 / bitmap.width));
+  async function prepararImagem(arquivo, maxPixels = 4_000_000) {
+    const img = await abrirImagem(arquivo);
+    const w = larguraDe(img);
+    const h = alturaDe(img);
+    let escala = Math.min(2, Math.max(1, 1400 / w));
+    escala = Math.min(escala, Math.sqrt(maxPixels / (w * h)));
+
     const c = document.createElement("canvas");
-    c.width = Math.round(bitmap.width * escala);
-    c.height = Math.round(bitmap.height * escala);
-    const ctx = c.getContext("2d");
-    ctx.filter = fundoEscuro(bitmap)
-      ? "grayscale(1) invert(1) contrast(1.6)"
-      : "grayscale(1) contrast(1.4)";
+    c.width = Math.max(1, Math.round(w * escala));
+    c.height = Math.max(1, Math.round(h * escala));
+    const ctx = c.getContext("2d", { willReadFrequently: true });
     ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(bitmap, 0, 0, c.width, c.height);
-    bitmap.close();
-    return c;
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    img.close?.();
+
+    const dados = ctx.getImageData(0, 0, c.width, c.height);
+    const px = dados.data;
+
+    let soma = 0;
+    for (let i = 0; i < px.length; i += 4 * 16) soma += 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+    const escuro = soma / (px.length / (4 * 16)) < 110;
+    const contraste = escuro ? 1.6 : 1.4;
+
+    for (let i = 0; i < px.length; i += 4) {
+      let y = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+      if (escuro) y = 255 - y;
+      y = (y - 128) * contraste + 128;
+      y = y < 0 ? 0 : y > 255 ? 255 : y;
+      px[i] = px[i + 1] = px[i + 2] = y;
+    }
+    ctx.putImageData(dados, 0, 0);
+
+    return new Promise((ok, falha) =>
+      c.toBlob((b) => (b ? ok(b) : falha(new Error("imagem"))), "image/png"));
   }
 
+  const mensagemDoErro = (erro) => String(erro?.message || erro || "");
+
   async function lerImagem(arquivo) {
-    if (!arquivo || !arquivo.type.startsWith("image/")) return;
+    // Alguns celulares mandam o arquivo sem tipo; só recusa se for claramente outra coisa.
+    if (!arquivo || (arquivo.type && !arquivo.type.startsWith("image/"))) return;
     etapaImport("lendo");
     $("import-progresso").style.setProperty("--p", "0%");
     $("import-status").textContent = "Carregando o leitor…";
@@ -1282,20 +1317,37 @@
     if (thumb.src.startsWith("blob:")) URL.revokeObjectURL(thumb.src);
     thumb.src = URL.createObjectURL(arquivo);
 
+    let Tesseract;
     try {
-      const Tesseract = await carregarTesseract();
-      const worker = await Tesseract.createWorker("por", 1, {
+      Tesseract = await carregarTesseract();
+    } catch {
+      etapaImport("inicio");
+      $("import-erro").textContent =
+        "Não consegui baixar o leitor de imagem. Confira a internet (ou se algum bloqueador de anúncios está barrando o site) e tente de novo.";
+      return;
+    }
+
+    let worker;
+    try {
+      worker = await Tesseract.createWorker("por", 1, {
         logger: (m) => {
           if (m.status === "recognizing text") {
             $("import-status").textContent = `Lendo as notas… ${Math.round(m.progress * 100)}%`;
             $("import-progresso").style.setProperty("--p", `${m.progress * 100}%`);
           } else if (m.status) {
-            $("import-status").textContent = "Preparando…";
+            $("import-status").textContent = "Preparando o leitor…";
           }
         },
       });
-      const { data } = await worker.recognize(await prepararImagem(arquivo));
-      await worker.terminate();
+
+      let data;
+      try {
+        ({ data } = await worker.recognize(await prepararImagem(arquivo)));
+      } catch {
+        // Celular com pouca memória: tenta de novo com a imagem menor.
+        $("import-status").textContent = "Tentando de novo com a imagem menor…";
+        ({ data } = await worker.recognize(await prepararImagem(arquivo, 1_500_000)));
+      }
 
       window.__textoOCR = data.text; // útil para ajustar a leitura (veja no console)
       // Primeiro tenta o layout em colunas do app; se não achar nada, usa a leitura por texto.
@@ -1305,7 +1357,13 @@
       mostrarRevisao();
     } catch (erro) {
       etapaImport("inicio");
-      $("import-erro").textContent = `${erro.message || "Algo deu errado ao ler a imagem."} Verifique sua internet e tente de novo.`;
+      const detalhe = mensagemDoErro(erro);
+      const rede = /network|fetch|load|failed to fetch|traineddata/i.test(detalhe);
+      $("import-erro").textContent = rede
+        ? "Não consegui baixar os arquivos do leitor. Confira a internet e tente de novo."
+        : `Não consegui ler esse print. Tente um print só da tela de notas. (Detalhe: ${detalhe || "erro desconhecido"})`;
+    } finally {
+      worker?.terminate().catch(() => {});
     }
   }
 
@@ -1376,6 +1434,13 @@
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
     aplicarTema(e.matches ? "dark" : "light");
   });
+
+  // ---------- Barra superior no celular: linha embaixo quando rola ----------
+
+  const appbar = document.querySelector(".appbar");
+  const marcarRolagem = () => appbar.classList.toggle("rolou", scrollY > 8);
+  addEventListener("scroll", marcarRolagem, { passive: true });
+  marcarRolagem();
 
   // ---------- Início ----------
 
