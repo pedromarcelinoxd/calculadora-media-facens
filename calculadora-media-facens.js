@@ -218,7 +218,7 @@
         aviso: `Precisa de ${formatar(as.necessaria)} na AS`,
       };
     }
-
+    
     const antesDaAF = notas.ac1 !== null && notas.ac2 !== null && notas.ag !== null;
 
     if (notas.af === null && antesDaAF) {
