@@ -20,7 +20,7 @@
       href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@500;600&amp;display=swap"
       rel="stylesheet"
     >
-    <link rel="stylesheet" href="calculadora-media-facens.css?v=16">
+    <link rel="stylesheet" href="calculadora-media-facens.css?v=17">
     <script>
       // Abre sempre no tema do sistema, antes de desenhar a página (sem piscar).
       document.documentElement.dataset.theme =
@@ -34,6 +34,13 @@
         <div class="appbar">
           <img class="brand" src="facens-logo.png" alt="Facens">
           <div class="appbar-acoes">
+            <button type="button" id="open-agenda" class="pesos-btn" aria-haspopup="dialog" aria-label="Agenda de avaliações" title="Agenda de avaliações">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="16" rx="3"/>
+                <path d="M3 10h18M8 3v4M16 3v4"/>
+              </svg>
+              <span>Agenda</span>
+            </button>
             <button type="button" id="open-semestres" class="pesos-btn" aria-haspopup="dialog" aria-label="Semestres e backup" title="Semestres e backup">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>
@@ -96,6 +103,7 @@
           <span class="resumo-label">Média geral</span>
           <strong id="media-geral">—</strong>
           <small id="media-geral-detalhe">Complete as 4 notas de uma matéria</small>
+          <button type="button" class="resumo-agenda" id="resumo-agenda" hidden></button>
         </div>
 
         <ul class="resumo-contagem">
@@ -167,6 +175,81 @@
       </div>
     </footer>
 
+    <dialog id="agenda-dialog" class="dialog dialog-agenda" aria-labelledby="agenda-titulo">
+      <div class="dialog-body">
+        <div class="dialog-head">
+          <h2 id="agenda-titulo">Agenda</h2>
+          <button type="button" class="icon-btn" id="agenda-fechar" aria-label="Fechar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="agenda-rolagem">
+          <div class="calendario">
+            <div class="cal-topo">
+              <button type="button" class="icon-btn" id="cal-anterior" aria-label="Mês anterior">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+              </button>
+              <strong id="cal-titulo" aria-live="polite"></strong>
+              <button type="button" class="icon-btn" id="cal-proximo" aria-label="Próximo mês">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+              </button>
+            </div>
+            <div class="cal-grade" id="cal-grade"></div>
+            <p class="cal-legenda">
+              <span><i class="leg-folga"></i>Fim de semana e feriado</span>
+              <span><i class="leg-evento"></i>Avaliação marcada</span>
+            </p>
+          </div>
+
+          <form class="agenda-form" id="agenda-form" novalidate>
+            <div class="agenda-campos">
+              <label>
+                <span>Tipo</span>
+                <select id="agenda-tipo">
+                  <option value="ac1">AC1</option>
+                  <option value="ac2">AC2</option>
+                  <option value="af">AF</option>
+                  <option value="as">AS</option>
+                  <option value="ag">AG</option>
+                  <option value="prova">Prova</option>
+                  <option value="apresentacao">Apresentação</option>
+                  <option value="trabalho">Trabalho</option>
+                  <option value="outro">Outro</option>
+                </select>
+              </label>
+              <label>
+                <span>Matéria</span>
+                <select id="agenda-materia"></select>
+              </label>
+              <label>
+                <span>Data</span>
+                <input type="date" id="agenda-data">
+              </label>
+              <label class="agenda-desc">
+                <span>Observação <small>(opcional)</small></span>
+                <input type="text" id="agenda-descricao" maxlength="60" placeholder="Ex.: capítulos 3 a 5, sala 204" autocomplete="off">
+              </label>
+            </div>
+            <p class="agenda-aviso" id="agenda-aviso" aria-live="polite"></p>
+            <button type="submit" class="primary" id="agenda-adicionar">Adicionar à agenda</button>
+          </form>
+
+          <section class="ag-bloco" aria-labelledby="ag-proximas-titulo">
+            <h3 id="ag-proximas-titulo">Próximas</h3>
+            <ul class="ag-lista" id="ag-lista"></ul>
+          </section>
+
+          <details class="ag-passados" id="ag-passados" hidden>
+            <summary>Já passaram (<span id="ag-passados-n">0</span>)</summary>
+            <ul class="ag-lista" id="ag-lista-passados"></ul>
+          </details>
+        </div>
+      </div>
+    </dialog>
+
     <dialog id="semestres-dialog" class="dialog dialog-semestres" aria-labelledby="semestres-titulo">
       <div class="dialog-body">
         <div class="dialog-head">
@@ -201,7 +284,7 @@
         <div class="backup">
           <div>
             <b>Backup</b>
-            <small>Leve as notas e o histórico para outro aparelho.</small>
+            <small>Leve as notas, o histórico e a agenda para outro aparelho.</small>
           </div>
           <div class="backup-botoes">
             <button type="button" id="backup-exportar">Exportar</button>
@@ -466,6 +549,6 @@
       </div>
     </dialog>
 
-    <script src="calculadora-media-facens.js?v=16" defer></script>
+    <script src="calculadora-media-facens.js?v=17" defer></script>
   </body>
 </html>

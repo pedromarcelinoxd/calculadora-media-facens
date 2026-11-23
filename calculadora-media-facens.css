@@ -2616,22 +2616,78 @@ kbd {
 }
 
 @media (max-width: 640px) {
+  /* Folha de altura fixa: não pula entre os passos; só o conteúdo rola e o rodapé fica preso. */
+  .dialog-tutorial {
+    height: min(600px, 88dvh);
+  }
+
+  .dialog-tutorial .dialog-body {
+    height: 100%;
+    max-height: none;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    overflow: hidden;
+  }
+
+  .tut-passos {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
   .tut-passo {
     grid-template-columns: minmax(0, 1fr);
+    align-content: start;
     justify-items: center;
-    gap: 18px;
+    gap: 16px;
     min-height: 0;
   }
 
   .tut-fone {
-    width: 128px;
+    width: 100px;
+    aspect-ratio: 9 / 16.5;
+    padding: 5px;
+    border-radius: 20px;
+  }
+
+  .tut-tela {
+    gap: 5px;
+    padding: 10px 7px;
+    border-radius: 16px;
+  }
+
+  .tut-botao-a {
+    top: 40px;
+    height: 24px;
+  }
+
+  .tut-botao-b {
+    top: 70px;
+    height: 18px;
+  }
+
+  .tut-texto h3 {
+    font-size: 18px;
+  }
+
+  .tut-rodape {
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
   }
 
   .tut-linha,
   .tut-revisao {
-    grid-template-columns: minmax(12px, 1fr) repeat(3, 17px);
-    gap: 3px;
-    padding: 5px;
+    grid-template-columns: minmax(8px, 1fr) repeat(3, 15px);
+    gap: 2px;
+    padding: 4px;
+  }
+
+  .tut-linha i,
+  .tut-revisao i {
+    font-size: 7.5px;
+  }
+
+  .tut-app-topo {
+    font-size: 8.5px;
   }
 
   .tut-texto {
@@ -2709,4 +2765,511 @@ kbd {
   * {
     transition: none !important;
   }
+}
+
+/* ---------- Agenda ---------- */
+
+.resumo-agenda,
+.card-agenda {
+  --u: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fg);
+  font-size: 13px;
+  text-align: left;
+  white-space: normal;
+}
+
+.resumo-agenda {
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin-top: 8px;
+  padding: 5px 10px;
+  border-radius: 99px;
+  background: var(--field);
+}
+
+.resumo-agenda[hidden],
+.card-agenda[hidden] {
+  display: none;
+}
+
+.resumo-agenda svg,
+.card-agenda svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  color: var(--u);
+}
+
+.resumo-agenda b,
+.card-agenda b {
+  font-weight: 600;
+}
+
+.card-agenda {
+  justify-content: flex-start;
+  width: 100%;
+  margin-top: -6px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: var(--field);
+}
+
+.card-agenda small {
+  margin-left: auto;
+  color: var(--muted);
+  font: 500 12px var(--mono);
+}
+
+.card-agenda:hover,
+.resumo-agenda:hover {
+  background: var(--accent-soft);
+}
+
+:is(.resumo-agenda, .card-agenda)[data-urgencia="bad"] { --u: var(--bad); }
+:is(.resumo-agenda, .card-agenda)[data-urgencia="warn"] { --u: var(--warn); }
+:is(.resumo-agenda, .card-agenda)[data-urgencia="ok"] { --u: var(--ok); }
+
+.dialog-agenda {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.dialog-agenda .dialog-body {
+  grid-template-rows: auto minmax(0, 1fr);
+  max-height: calc(100dvh - 32px);
+  overflow: hidden;
+}
+
+.dialog-agenda {
+  overflow: hidden;
+}
+
+/* o form da agenda não é o corpo do pop-up: sem o padding/alça de .dialog form */
+.dialog-agenda .agenda-form {
+  max-height: none;
+  padding: 0;
+  overflow: visible;
+}
+
+.dialog-agenda .agenda-form::before {
+  display: none;
+}
+
+.agenda-rolagem {
+  display: grid;
+  gap: 18px;
+  min-height: 0;
+  margin: 0 -22px;
+  padding: 0 22px 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* calendário */
+.calendario {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--field);
+}
+
+.cal-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cal-topo strong {
+  font-size: 15px;
+}
+
+.cal-grade {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.cal-semana {
+  padding: 2px 0 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.cal-dia {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 40px;
+  padding: 0 0 6px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--fg);
+  font: 600 13.5px var(--mono);
+}
+
+.cal-dia:hover {
+  border-color: var(--accent);
+}
+
+.cal-dia.folga {
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.cal-dia.feriado {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.cal-dia.fora {
+  opacity: 0.35;
+}
+
+.cal-dia.hoje {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  color: var(--accent);
+}
+
+.cal-dia.selecionado {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+:root[data-theme="dark"] .cal-dia.selecionado {
+  color: #0b0e13;
+}
+
+.cal-pontos {
+  position: absolute;
+  bottom: 5px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+}
+
+.cal-pontos i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.cal-pontos i[data-tipo="af"],
+.cal-pontos i[data-tipo="as"],
+.cal-pontos i[data-tipo="prova"] {
+  background: var(--bad);
+}
+
+.cal-pontos i[data-tipo="apresentacao"],
+.cal-pontos i[data-tipo="trabalho"] {
+  background: var(--warn);
+}
+
+.cal-dia.selecionado .cal-pontos i {
+  background: currentColor;
+}
+
+.cal-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.cal-legenda span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cal-legenda i {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+
+.leg-folga {
+  border: 1px solid var(--muted);
+}
+
+.leg-evento {
+  border-radius: 50% !important;
+  background: var(--accent);
+}
+
+/* formulário */
+.agenda-form {
+  display: grid;
+  gap: 10px;
+}
+
+.agenda-campos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.agenda-campos label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.agenda-campos label small {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.agenda-desc {
+  grid-column: 1 / -1;
+}
+
+.agenda-campos select,
+.agenda-campos input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--field);
+  color: var(--fg);
+  font: 500 14px var(--sans);
+}
+
+.agenda-campos :is(select, input):focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.agenda-aviso {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.agenda-aviso:empty {
+  display: none;
+}
+
+.agenda-aviso[data-tom="warn"] { color: var(--warn); }
+.agenda-aviso[data-tom="bad"] { color: var(--bad); }
+
+/* lista */
+.ag-bloco {
+  display: grid;
+  gap: 8px;
+}
+
+.ag-bloco h3 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ag-lista {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ag-item {
+  --u: var(--muted);
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px 8px 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.ag-item[data-urgencia="bad"] { --u: var(--bad); }
+.ag-item[data-urgencia="warn"] { --u: var(--warn); }
+.ag-item[data-urgencia="ok"] { --u: var(--ok); }
+.ag-item[data-urgencia="passou"] { opacity: 0.6; }
+
+.ag-item.novo {
+  animation: ag-novo 0.9s ease-out;
+}
+
+@keyframes ag-novo {
+  from {
+    background: var(--accent-soft);
+  }
+}
+
+.ag-data {
+  display: grid;
+  justify-items: center;
+  line-height: 1.1;
+}
+
+.ag-data b {
+  font: 700 18px var(--mono);
+}
+
+.ag-data small {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.ag-info {
+  display: grid;
+  min-width: 0;
+}
+
+.ag-titulo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.ag-materia {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ag-tipo {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font: 700 11px var(--mono);
+}
+
+.ag-tipo[data-tipo="af"],
+.ag-tipo[data-tipo="as"],
+.ag-tipo[data-tipo="prova"] {
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+
+.ag-tipo[data-tipo="apresentacao"],
+.ag-tipo[data-tipo="trabalho"] {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.ag-info small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ag-quando {
+  color: var(--u);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ag-item .icon-btn {
+  width: 32px;
+  height: 32px;
+}
+
+.ag-item .icon-btn:hover {
+  background: var(--bad-soft);
+  color: var(--bad);
+}
+
+.ag-vazio {
+  padding: 16px;
+  border: 1.5px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.ag-passados summary {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ag-passados[open] summary {
+  margin-bottom: 8px;
+}
+
+@media (max-width: 640px) {
+  .dialog-agenda {
+    height: 92dvh;
+  }
+
+  .dialog-agenda .dialog-body {
+    height: 100%;
+    max-height: none;
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  .agenda-rolagem {
+    margin: 0 -18px;
+    padding: 0 18px calc(8px + env(safe-area-inset-bottom));
+  }
+
+  .agenda-campos {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .agenda-campos label:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+
+  .agenda-campos select,
+  .agenda-campos input {
+    font-size: 16px;
+  }
+
+  .agenda-form .primary {
+    height: 48px;
+  }
+
+  .cal-dia {
+    height: 38px;
+  }
+
+  .ag-item {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    grid-template-areas: "data info apagar" "data quando apagar";
+    row-gap: 2px;
+  }
+
+  .ag-data { grid-area: data; }
+  .ag-info { grid-area: info; }
+  .ag-quando { grid-area: quando; justify-self: start; }
+  .ag-item .icon-btn { grid-area: apagar; }
 }

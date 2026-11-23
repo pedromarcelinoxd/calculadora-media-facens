@@ -43,12 +43,12 @@
     as: dados.as ?? "", // Avaliação Substitutiva
     asAlvo: IDS.includes(dados.asAlvo) ? dados.asAlvo : "auto", // nota que a AS substitui
     faltas: dados.faltas ?? "",
-    aulas: dados.aulas ?? "",
+    limite: dados.limite ?? "", // máximo de faltas da matéria (vazio = padrão)
     sim: null, // valor do simulador da AF (não é salvo)
   });
 
-  // Frequência mínima para não reprovar por falta (75% das aulas).
-  const FREQUENCIA_MINIMA = 0.75;
+  // Máximo de faltas por matéria na Facens (dá para mudar em cada card).
+  const LIMITE_FALTAS_PADRAO = 20;
 
   const pesosValidos = (p) =>
     p &&
@@ -91,8 +91,8 @@
 
   function exportarDados() {
     return {
-      subjects: estado.materias.map(({ name, ac1, ac2, ag, af, as, asAlvo, faltas, aulas }) =>
-        ({ name, ac1, ac2, ag, af, as, asAlvo, faltas, aulas })),
+      subjects: estado.materias.map(({ name, ac1, ac2, ag, af, as, asAlvo, faltas, limite }) =>
+        ({ name, ac1, ac2, ag, af, as, asAlvo, faltas, limite })),
       meta: estado.meta,
       pesos: estado.pesos,
     };
@@ -258,16 +258,17 @@
     };
   }
 
-  /** Faltas: limite de 25% das aulas. Devolve null quando a matéria não tem as aulas preenchidas. */
+  /** Faltas: até o máximo da matéria (20 por padrão). Sem faltas digitadas, não mostra nada. */
   function avaliarFaltas(materia) {
-    const aulas = Number(String(materia.aulas).trim());
-    const faltas = String(materia.faltas).trim() === "" ? 0 : Number(String(materia.faltas).trim());
-    const aulasOk = Number.isInteger(aulas) && aulas > 0;
-    const faltasOk = Number.isInteger(faltas) && faltas >= 0;
-    if (!aulasOk) return { invalidaAulas: String(materia.aulas).trim() !== "", invalidaFaltas: !faltasOk };
-    if (!faltasOk) return { invalidaFaltas: true };
-    const limite = Math.floor(aulas * (1 - FREQUENCIA_MINIMA));
-    return { faltas, aulas, limite, restam: limite - faltas, estourou: faltas > limite };
+    const textoFaltas = String(materia.faltas).trim();
+    const textoLimite = String(materia.limite ?? "").trim();
+    const faltas = Number(textoFaltas);
+    const limite = textoLimite === "" ? LIMITE_FALTAS_PADRAO : Number(textoLimite);
+    const limiteOk = Number.isInteger(limite) && limite >= 0;
+    const faltasOk = textoFaltas === "" || (Number.isInteger(faltas) && faltas >= 0);
+    if (!limiteOk || !faltasOk) return { invalidaLimite: !limiteOk, invalidaFaltas: !faltasOk };
+    if (textoFaltas === "") return {};
+    return { faltas, limite, restam: limite - faltas, estourou: faltas > limite };
   }
 
   /** Avaliação completa: notas + faltas (reprovar por falta vence tudo). */
@@ -334,7 +335,8 @@
           <label for="faltas-${id}">Faltas</label>
           <input type="text" inputmode="numeric" id="faltas-${id}" data-field="faltas" placeholder="0" autocomplete="off" value="${escaparHTML(materia.faltas)}">
           <span aria-hidden="true">de</span>
-          <input type="text" inputmode="numeric" data-field="aulas" placeholder="aulas" aria-label="Total de aulas da matéria" autocomplete="off" value="${escaparHTML(materia.aulas)}">
+          <input type="text" inputmode="numeric" data-field="limite" placeholder="${LIMITE_FALTAS_PADRAO}" aria-label="Máximo de faltas da matéria" title="Máximo de faltas (padrão ${LIMITE_FALTAS_PADRAO})" autocomplete="off" value="${escaparHTML(materia.limite)}">
+          <span aria-hidden="true">máx.</span>
           <span class="faltas-info" data-out="faltas"></span>
         </div>
 
@@ -368,6 +370,8 @@
             <p class="as-result" data-out="as-result"></p>
           </div>
         </div>
+
+        <button type="button" class="card-agenda" data-out="agenda" data-action="agenda" hidden></button>
 
         <div class="cardfoot">
           <span class="status" data-out="status">Preencha as notas</span>
@@ -432,7 +436,7 @@
       // Faltas
       const f = r.faltas;
       card.querySelector('[data-field="faltas"]').classList.toggle("invalid", Boolean(f.invalidaFaltas));
-      card.querySelector('[data-field="aulas"]').classList.toggle("invalid", Boolean(f.invalidaAulas));
+      card.querySelector('[data-field="limite"]').classList.toggle("invalid", Boolean(f.invalidaLimite));
       const info = out("faltas");
       info.dataset.nivel = f.limite === undefined ? "" : f.estourou ? "bad" : f.restam <= Math.max(1, Math.floor(f.limite / 4)) ? "warn" : "ok";
       info.textContent = f.limite === undefined
@@ -514,6 +518,7 @@
     });
 
     atualizarResumo(resultados);
+    atualizarAgendaNosCards();
     ultimosResultados = resultados;
     // Reordenar enquanto alguém digita faria o card "fugir"; espera sair do card.
     if (!lista.contains(document.activeElement)) organizar();
@@ -632,7 +637,7 @@
       return;
     }
 
-    if ((e.key === "ArrowUp" || e.key === "ArrowDown") && (CAMPOS_NOTA.has(campo) || campo === "faltas" || campo === "aulas")) {
+    if ((e.key === "ArrowUp" || e.key === "ArrowDown") && (CAMPOS_NOTA.has(campo) || campo === "faltas" || campo === "limite")) {
       e.preventDefault();
       const ehNota = CAMPOS_NOTA.has(campo);
       const passo = (ehNota ? 0.5 : 1) * (e.key === "ArrowUp" ? 1 : -1);
@@ -711,6 +716,12 @@
       const nome = cardDe(nova).querySelector(".name");
       nome.focus();
       cardDe(nova).scrollIntoView({ block: "nearest", behavior: "smooth" });
+      return;
+    }
+
+    if (botao.dataset.action === "agenda") {
+      const materia = materiaDe(botao);
+      abrirAgenda({ materia: materia ? nomeDe(materia, estado.materias.indexOf(materia)) : "" });
       return;
     }
 
@@ -918,7 +929,7 @@
   function gerarLink() {
     const d = exportarDados();
     const compacto = {
-      s: d.subjects.map((m) => [m.name, m.ac1, m.ac2, m.ag, m.af, m.as, m.asAlvo, m.faltas, m.aulas]),
+      s: d.subjects.map((m) => [m.name, m.ac1, m.ac2, m.ag, m.af, m.as, m.asAlvo, m.faltas, "", m.limite]),
       m: d.meta,
       p: IDS.map((id) => d.pesos[id]),
     };
@@ -935,8 +946,9 @@
       if (!Array.isArray(c.s)) return null;
       return {
         subjects: c.s.map((linha) => {
-          const [name, ac1, ac2, ag, af, as, asAlvo, faltas, aulas] = linha.map((v) => String(v ?? "").slice(0, 50));
-          return { name, ac1, ac2, ag, af, as, asAlvo, faltas, aulas };
+          // posição 8 era o total de aulas (versão antiga); o máximo de faltas fica na 9
+          const [name, ac1, ac2, ag, af, as, asAlvo, faltas, , limite] = linha.map((v) => String(v ?? "").slice(0, 50));
+          return { name, ac1, ac2, ag, af, as, asAlvo, faltas, limite };
         }),
         meta: String(c.m ?? "6,0").slice(0, 6),
         pesos: Array.isArray(c.p) ? Object.fromEntries(IDS.map((id, i) => [id, Number(c.p[i])])) : null,
@@ -1597,6 +1609,7 @@
   function irParaPasso(n) {
     passoTutorial = Math.min(TOTAL_PASSOS, Math.max(1, n));
     dialogoTutorial.dataset.passo = passoTutorial;
+    dialogoTutorial.querySelector(".tut-passos").scrollTop = 0;
     dialogoTutorial.querySelectorAll(".tut-passo").forEach((li) => {
       li.hidden = Number(li.dataset.n) !== passoTutorial;
     });
@@ -1727,6 +1740,347 @@
   const marcarRolagem = () => appbar.classList.toggle("rolou", scrollY > 8);
   addEventListener("scroll", marcarRolagem, { passive: true });
   marcarRolagem();
+
+  // ---------- Agenda: provas, avaliações e apresentações ----------
+
+  const CHAVE_AGENDA = "calc-media-facens-agenda";
+
+  const TIPOS = {
+    ac1: "AC1",
+    ac2: "AC2",
+    af: "AF",
+    as: "AS",
+    ag: "AG",
+    prova: "Prova",
+    apresentacao: "Apresentação",
+    trabalho: "Trabalho",
+    outro: "Outro",
+  };
+
+  const DIAS_SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+  const DIAS_SEMANA_LONGO = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+  const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+
+  const doISO = (iso) => {
+    const [a, m, d] = iso.split("-").map(Number);
+    return new Date(a, m - 1, d);
+  };
+  const paraISO = (data) =>
+    `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}-${String(data.getDate()).padStart(2, "0")}`;
+  const hojeISO = () => paraISO(new Date());
+  const somarDias = (data, n) => new Date(data.getFullYear(), data.getMonth(), data.getDate() + n);
+  const diaMes = (data) => `${String(data.getDate()).padStart(2, "0")}/${String(data.getMonth() + 1).padStart(2, "0")}`;
+  const maiuscula = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+
+  /** Domingo de Páscoa (algoritmo de Meeus/Jones/Butcher). */
+  function pascoa(ano) {
+    const a = ano % 19, b = Math.floor(ano / 100), c = ano % 100;
+    const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const mes = Math.floor((h + l - 7 * m + 114) / 31);
+    const dia = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(ano, mes - 1, dia);
+  }
+
+  const cacheFeriados = new Map();
+
+  /** Feriados nacionais, mais Carnaval e Corpus Christi (sem aula na maioria das faculdades). */
+  function feriadosDoAno(ano) {
+    if (cacheFeriados.has(ano)) return cacheFeriados.get(ano);
+    const p = pascoa(ano);
+    const lista = [
+      [new Date(ano, 0, 1), "Confraternização Universal"],
+      [somarDias(p, -48), "Carnaval"],
+      [somarDias(p, -47), "Carnaval"],
+      [somarDias(p, -2), "Sexta-feira Santa"],
+      [new Date(ano, 3, 21), "Tiradentes"],
+      [new Date(ano, 4, 1), "Dia do Trabalho"],
+      [somarDias(p, 60), "Corpus Christi"],
+      [new Date(ano, 8, 7), "Independência"],
+      [new Date(ano, 9, 12), "Nossa Senhora Aparecida"],
+      [new Date(ano, 10, 2), "Finados"],
+      [new Date(ano, 10, 15), "Proclamação da República"],
+      [new Date(ano, 10, 20), "Consciência Negra"],
+      [new Date(ano, 11, 25), "Natal"],
+    ];
+    const mapa = new Map(lista.map(([d, nome]) => [paraISO(d), nome]));
+    cacheFeriados.set(ano, mapa);
+    return mapa;
+  }
+
+  const feriado = (data) => feriadosDoAno(data.getFullYear()).get(paraISO(data)) || null;
+  const fimDeSemana = (data) => data.getDay() === 0 || data.getDay() === 6;
+  const diaUtil = (data) => !fimDeSemana(data) && !feriado(data);
+
+  /** Dias úteis de amanhã até a data (inclusive). Hoje = 0; passado = -1. */
+  function diasUteisAte(iso) {
+    const alvo = doISO(iso);
+    const hoje = doISO(hojeISO());
+    if (alvo.getTime() === hoje.getTime()) return 0;
+    if (alvo < hoje) return -1;
+    let n = 0;
+    for (let d = somarDias(hoje, 1); d <= alvo; d = somarDias(d, 1)) if (diaUtil(d)) n++;
+    return n;
+  }
+
+  /** Texto curto: "hoje", "amanhã", "em 4 dias úteis". */
+  function quandoTexto(iso) {
+    const corridos = Math.round((doISO(iso) - doISO(hojeISO())) / 86400000);
+    if (corridos < 0) return "já passou";
+    if (corridos === 0) return "hoje";
+    if (corridos === 1) return "amanhã";
+    const uteis = diasUteisAte(iso);
+    return `em ${uteis} ${uteis === 1 ? "dia útil" : "dias úteis"}`;
+  }
+
+  function urgencia(iso) {
+    const n = diasUteisAte(iso);
+    if (n < 0) return "passou";
+    if (n <= 2) return "bad";
+    if (n <= 5) return "warn";
+    return "ok";
+  }
+
+  const eventoValido = (e) =>
+    e && typeof e.id === "string" && typeof e.data === "string" && /^\d{4}-\d{2}-\d{2}$/.test(e.data) && e.tipo in TIPOS;
+
+  let agenda = (() => {
+    try {
+      const a = JSON.parse(localStorage.getItem(CHAVE_AGENDA) || "[]");
+      return Array.isArray(a) ? a.filter(eventoValido) : [];
+    } catch {
+      return [];
+    }
+  })();
+
+  function salvarAgenda() {
+    try { localStorage.setItem(CHAVE_AGENDA, JSON.stringify(agenda)); } catch { /* sem armazenamento */ }
+  }
+
+  const ordenarAgenda = () => agenda.sort((a, b) => a.data.localeCompare(b.data) || (a.criado || 0) - (b.criado || 0));
+  const tituloEvento = (e) => [TIPOS[e.tipo], e.materia].filter(Boolean).join(" · ");
+  const mesmaMateria = (a, b) => a.trim().toLocaleLowerCase("pt-BR") === b.trim().toLocaleLowerCase("pt-BR");
+  const proximosEventos = () => {
+    const hoje = hojeISO();
+    return ordenarAgenda().filter((e) => e.data >= hoje);
+  };
+
+  const ICONE_CALENDARIO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
+
+  // Linha "AF amanhã · qui, 12/12" em cada card e "Próxima: ..." no resumo.
+  function atualizarAgendaNosCards() {
+    const proximos = proximosEventos();
+    estado.materias.forEach((m, i) => {
+      const linha = cardDe(m)?.querySelector('[data-out="agenda"]');
+      if (!linha) return;
+      const nome = nomeDe(m, i);
+      const evento = proximos.find((e) => e.materia && mesmaMateria(e.materia, nome));
+      linha.hidden = !evento;
+      if (!evento) return;
+      const d = doISO(evento.data);
+      linha.dataset.urgencia = urgencia(evento.data);
+      linha.setAttribute("aria-label", `${TIPOS[evento.tipo]} ${quandoTexto(evento.data)}. Abrir agenda`);
+      linha.innerHTML = `${ICONE_CALENDARIO}<span><b>${escaparHTML(TIPOS[evento.tipo])}</b> ${quandoTexto(evento.data)}</span><small>${DIAS_SEMANA[d.getDay()]}, ${diaMes(d)}</small>`;
+    });
+
+    const prox = $("resumo-agenda");
+    const primeiro = proximos[0];
+    prox.hidden = !primeiro;
+    if (primeiro) {
+      prox.dataset.urgencia = urgencia(primeiro.data);
+      prox.innerHTML = `${ICONE_CALENDARIO}<span>Próxima: <b>${escaparHTML(tituloEvento(primeiro))}</b> ${quandoTexto(primeiro.data)}</span>`;
+    }
+  }
+
+  // ---------- Pop-up da agenda ----------
+
+  const dialogoAgenda = $("agenda-dialog");
+  let mesVisivel = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  let diaSelecionado = hojeISO();
+
+  function preencherMaterias(preferida = "") {
+    const sel = $("agenda-materia");
+    const nomes = [...new Set(estado.materias.map((m, i) => nomeDe(m, i)))];
+    sel.innerHTML = `<option value="">Sem matéria</option>` +
+      nomes.map((n) => `<option value="${escaparHTML(n)}">${escaparHTML(n)}</option>`).join("");
+    const achada = preferida && nomes.find((n) => mesmaMateria(n, preferida));
+    if (achada) sel.value = achada;
+  }
+
+  function avisoDaData() {
+    const iso = $("agenda-data").value;
+    const aviso = $("agenda-aviso");
+    aviso.dataset.tom = "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      aviso.textContent = "";
+      return;
+    }
+    const d = doISO(iso);
+    const f = feriado(d);
+    if (f) {
+      aviso.textContent = `Atenção: ${diaMes(d)} é feriado (${f}).`;
+      aviso.dataset.tom = "warn";
+    } else if (fimDeSemana(d)) {
+      aviso.textContent = `Atenção: ${diaMes(d)} cai num ${DIAS_SEMANA_LONGO[d.getDay()]}.`;
+      aviso.dataset.tom = "warn";
+    } else {
+      aviso.textContent = `${maiuscula(DIAS_SEMANA_LONGO[d.getDay()])}, ${quandoTexto(iso)}.`;
+    }
+  }
+
+  function desenharCalendario() {
+    const ano = mesVisivel.getFullYear();
+    const mes = mesVisivel.getMonth();
+    $("cal-titulo").textContent = `${maiuscula(MESES[mes])} ${ano}`;
+
+    const porDia = new Map();
+    agenda.forEach((e) => {
+      if (!porDia.has(e.data)) porDia.set(e.data, []);
+      porDia.get(e.data).push(e);
+    });
+
+    const primeiro = new Date(ano, mes, 1);
+    const inicio = somarDias(primeiro, -primeiro.getDay());
+    const hoje = hojeISO();
+    let html = DIAS_SEMANA.map((d) => `<span class="cal-semana" aria-hidden="true">${d.charAt(0).toUpperCase()}</span>`).join("");
+
+    for (let i = 0; i < 42; i++) {
+      const d = somarDias(inicio, i);
+      if (i % 7 === 0 && i > 0 && d.getMonth() !== mes) break; // sem semana extra vazia
+      const iso = paraISO(d);
+      const f = feriado(d);
+      const eventos = porDia.get(iso) || [];
+      const classes = [
+        "cal-dia",
+        d.getMonth() !== mes && "fora",
+        !diaUtil(d) && "folga",
+        f && "feriado",
+        iso === hoje && "hoje",
+        iso === diaSelecionado && "selecionado",
+      ].filter(Boolean).join(" ");
+      const rotulo = [
+        `${d.getDate()} de ${MESES[d.getMonth()]}`,
+        f && `feriado: ${f}`,
+        eventos.length && eventos.map(tituloEvento).join(", "),
+      ].filter(Boolean).join(" · ");
+      html += `<button type="button" class="${classes}" data-dia="${iso}" aria-label="${escaparHTML(rotulo)}"${f ? ` title="${escaparHTML(f)}"` : ""}>${d.getDate()}${
+        eventos.length ? `<span class="cal-pontos">${eventos.slice(0, 3).map((e) => `<i data-tipo="${e.tipo}"></i>`).join("")}</span>` : ""
+      }</button>`;
+    }
+    $("cal-grade").innerHTML = html;
+  }
+
+  function htmlEvento(e) {
+    const d = doISO(e.data);
+    return `
+      <li class="ag-item" data-urgencia="${urgencia(e.data)}" data-id="${escaparHTML(e.id)}">
+        <span class="ag-data"><b>${d.getDate()}</b><small>${MESES[d.getMonth()].slice(0, 3)}</small></span>
+        <div class="ag-info">
+          <span class="ag-titulo"><span class="ag-tipo" data-tipo="${e.tipo}">${escaparHTML(TIPOS[e.tipo])}</span>${e.materia ? `<span class="ag-materia">${escaparHTML(e.materia)}</span>` : ""}</span>
+          <small>${maiuscula(DIAS_SEMANA_LONGO[d.getDay()])}${e.descricao ? ` · ${escaparHTML(e.descricao)}` : ""}</small>
+        </div>
+        <span class="ag-quando">${quandoTexto(e.data)}</span>
+        <button type="button" class="icon-btn" data-remover-evento="${escaparHTML(e.id)}" aria-label="Apagar ${escaparHTML(tituloEvento(e))}" title="Apagar">${iconeX}</button>
+      </li>`;
+  }
+
+  function desenharLista() {
+    const hoje = hojeISO();
+    const futuros = ordenarAgenda().filter((e) => e.data >= hoje);
+    const passados = agenda.filter((e) => e.data < hoje).reverse();
+
+    $("ag-lista").innerHTML = futuros.length
+      ? futuros.map(htmlEvento).join("")
+      : `<li class="ag-vazio">Nada marcado. Escolha um dia no calendário e adicione a primeira avaliação.</li>`;
+
+    $("ag-passados").hidden = passados.length === 0;
+    $("ag-passados-n").textContent = passados.length;
+    $("ag-lista-passados").innerHTML = passados.map(htmlEvento).join("");
+  }
+
+  function desenharAgenda() {
+    desenharCalendario();
+    desenharLista();
+    avisoDaData();
+  }
+
+  function abrirAgenda({ materia = "" } = {}) {
+    preencherMaterias(materia);
+    if (!$("agenda-data").value) $("agenda-data").value = diaSelecionado;
+    desenharAgenda();
+    dialogoAgenda.showModal();
+  }
+
+  function irParaMes(delta) {
+    mesVisivel = new Date(mesVisivel.getFullYear(), mesVisivel.getMonth() + delta, 1);
+    desenharCalendario();
+  }
+
+  $("open-agenda").addEventListener("click", () => abrirAgenda());
+  $("resumo-agenda").addEventListener("click", () => abrirAgenda());
+  $("agenda-fechar").addEventListener("click", () => dialogoAgenda.close());
+  $("cal-anterior").addEventListener("click", () => irParaMes(-1));
+  $("cal-proximo").addEventListener("click", () => irParaMes(1));
+
+  $("cal-grade").addEventListener("click", (e) => {
+    const dia = e.target.closest("[data-dia]");
+    if (!dia) return;
+    diaSelecionado = dia.dataset.dia;
+    $("agenda-data").value = diaSelecionado;
+    const d = doISO(diaSelecionado);
+    if (d.getMonth() !== mesVisivel.getMonth()) mesVisivel = new Date(d.getFullYear(), d.getMonth(), 1);
+    desenharCalendario();
+    avisoDaData();
+  });
+
+  $("agenda-data").addEventListener("input", () => {
+    const iso = $("agenda-data").value;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      diaSelecionado = iso;
+      const d = doISO(iso);
+      mesVisivel = new Date(d.getFullYear(), d.getMonth(), 1);
+      desenharCalendario();
+    }
+    avisoDaData();
+  });
+
+  $("agenda-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const data = $("agenda-data").value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+      $("agenda-aviso").textContent = "Escolha a data.";
+      $("agenda-aviso").dataset.tom = "bad";
+      $("agenda-data").focus();
+      return;
+    }
+    const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    agenda.push({
+      id,
+      tipo: $("agenda-tipo").value,
+      materia: $("agenda-materia").value,
+      descricao: $("agenda-descricao").value.trim().slice(0, 60),
+      data,
+      criado: Date.now(),
+    });
+    salvarAgenda();
+    $("agenda-descricao").value = "";
+    desenharAgenda();
+    atualizarAgendaNosCards();
+    const novo = $("agenda-dialog").querySelector(`.ag-item[data-id="${id}"]`);
+    novo?.classList.add("novo");
+    novo?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  });
+
+  dialogoAgenda.addEventListener("click", (e) => {
+    const botao = e.target.closest("[data-remover-evento]");
+    if (!botao) return;
+    agenda = agenda.filter((x) => x.id !== botao.dataset.removerEvento);
+    salvarAgenda();
+    desenharAgenda();
+    atualizarAgendaNosCards();
+  });
 
   // ---------- Histórico de semestres ----------
 
@@ -1879,6 +2233,7 @@
       exportado: new Date().toISOString(),
       atual: exportarDados(),
       historico,
+      agenda,
     };
     const blob = new Blob([JSON.stringify(dados, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -1909,7 +2264,7 @@
 
     const ok = await confirmarDentro({
       titulo: "Restaurar este backup?",
-      texto: "As notas atuais e o histórico deste navegador serão trocados pelos do arquivo.",
+      texto: "As notas, o histórico e a agenda deste navegador serão trocados pelos do arquivo.",
       acao: "Restaurar",
       icone: "importar",
     });
@@ -1917,6 +2272,10 @@
 
     aplicarDados(dados.atual);
     historico = Array.isArray(dados.historico) ? dados.historico.filter(semestreValido) : [];
+    if (Array.isArray(dados.agenda)) {
+      agenda = dados.agenda.filter(eventoValido);
+      salvarAgenda();
+    }
     salvar();
     salvarHistorico();
     iniciar();
