@@ -1571,11 +1571,93 @@
     }
   }
 
-  $("import").addEventListener("click", () => {
+  function abrirImport() {
     etapaImport("inicio");
     $("import-erro").textContent = "";
     $("import-arquivo").value = "";
     dialogoImport.showModal();
+  }
+
+  $("import").addEventListener("click", () => {
+    // Na primeira vez, mostra o tutorial antes.
+    if (!prefs.tutorialVisto) {
+      abrirTutorial({ depois: "importar" });
+      return;
+    }
+    abrirImport();
+  });
+
+  // ---------- Tutorial do print ----------
+
+  const dialogoTutorial = $("tutorial-dialog");
+  const TOTAL_PASSOS = 4;
+  let passoTutorial = 1;
+  let tutorialDepois = null; // "importar": ao terminar, abre o pop-up de importar
+
+  function irParaPasso(n) {
+    passoTutorial = Math.min(TOTAL_PASSOS, Math.max(1, n));
+    dialogoTutorial.dataset.passo = passoTutorial;
+    dialogoTutorial.querySelectorAll(".tut-passo").forEach((li) => {
+      li.hidden = Number(li.dataset.n) !== passoTutorial;
+    });
+    dialogoTutorial.querySelectorAll("[data-ir]").forEach((b) => {
+      b.setAttribute("aria-current", String(Number(b.dataset.ir) === passoTutorial));
+    });
+    $("tutorial-voltar").hidden = passoTutorial === 1;
+    $("tutorial-proximo").textContent = passoTutorial < TOTAL_PASSOS
+      ? "Próximo"
+      : tutorialDepois === "importar" ? "Escolher print" : "Entendi";
+  }
+
+  function abrirTutorial({ depois = null } = {}) {
+    tutorialDepois = depois;
+    irParaPasso(1);
+    dialogoTutorial.showModal();
+    $("tutorial-proximo").focus();
+  }
+
+  function concluirTutorial() {
+    prefs.tutorialVisto = true;
+    salvarPrefs();
+    dialogoTutorial.close("fim");
+  }
+
+  $("tutorial-abrir").addEventListener("click", () => {
+    dialogoImport.close();
+    abrirTutorial({ depois: "importar" });
+  });
+
+  $("tutorial-proximo").addEventListener("click", () => {
+    if (passoTutorial < TOTAL_PASSOS) irParaPasso(passoTutorial + 1);
+    else concluirTutorial();
+  });
+  $("tutorial-voltar").addEventListener("click", () => irParaPasso(passoTutorial - 1));
+  $("tutorial-fechar").addEventListener("click", concluirTutorial);
+  dialogoTutorial.querySelectorAll("[data-ir]").forEach((b) =>
+    b.addEventListener("click", () => irParaPasso(Number(b.dataset.ir))));
+
+  // Setas do teclado e deslizar o dedo trocam de passo.
+  dialogoTutorial.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") irParaPasso(passoTutorial + 1);
+    if (e.key === "ArrowLeft") irParaPasso(passoTutorial - 1);
+  });
+  let toqueX = null;
+  dialogoTutorial.addEventListener("touchstart", (e) => { toqueX = e.touches[0].clientX; }, { passive: true });
+  dialogoTutorial.addEventListener("touchend", (e) => {
+    if (toqueX === null) return;
+    const dx = e.changedTouches[0].clientX - toqueX;
+    toqueX = null;
+    if (Math.abs(dx) > 50) irParaPasso(passoTutorial + (dx < 0 ? 1 : -1));
+  });
+
+  // Fechou de qualquer jeito (X, Esc, fora, ou terminou): marca como visto e volta para o importar.
+  dialogoTutorial.addEventListener("close", () => {
+    prefs.tutorialVisto = true;
+    salvarPrefs();
+    if (tutorialDepois === "importar") {
+      tutorialDepois = null;
+      abrirImport();
+    }
   });
 
   $("import-fechar").addEventListener("click", () => dialogoImport.close());

@@ -20,7 +20,7 @@
       href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@500;600&amp;display=swap"
       rel="stylesheet"
     >
-    <link rel="stylesheet" href="calculadora-media-facens.css?v=15">
+    <link rel="stylesheet" href="calculadora-media-facens.css?v=16">
     <script>
       // Abre sempre no tema do sistema, antes de desenhar a página (sem piscar).
       document.documentElement.dataset.theme =
@@ -307,6 +307,101 @@
       </div>
     </dialog>
 
+    <dialog id="tutorial-dialog" class="dialog dialog-tutorial" aria-labelledby="tutorial-titulo" data-passo="1">
+      <div class="dialog-body">
+        <div class="dialog-head">
+          <h2 id="tutorial-titulo">Como importar pelo print</h2>
+          <button type="button" class="icon-btn" id="tutorial-fechar" aria-label="Fechar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18"/>
+            </svg>
+          </button>
+        </div>
+
+        <ol class="tut-passos">
+          <li class="tut-passo" data-n="1">
+            <div class="tut-fone" aria-hidden="true">
+              <div class="tut-tela"><span class="tut-app-topo">Notas · 2026.2</span>
+                <span class="tut-linha"><b></b><i>7,5</i><i>6,0</i><i>8,0</i></span>
+                <span class="tut-linha"><b></b><i>8,0</i><i>8,5</i><i>9,0</i></span>
+                <span class="tut-linha"><b></b><i>5,0</i><i>4,0</i><i>6,0</i></span>
+                <span class="tut-linha"><b></b><i>9,0</i><i>8,0</i><i>10</i></span></div>
+            </div>
+            <div class="tut-texto">
+              <span class="tut-num">Passo 1 de 4</span>
+              <h3>Abra suas notas no app da Facens</h3>
+              <p>Entre no app e vá até a tela com as notas do semestre, onde aparecem as matérias e as colunas AC1, AC2, AF e AG.</p>
+            </div>
+          </li>
+
+          <li class="tut-passo" data-n="2">
+            <div class="tut-fone tut-fone-botoes" aria-hidden="true">
+              <i class="tut-botao tut-botao-a"></i><i class="tut-botao tut-botao-b"></i>
+              <div class="tut-tela tut-flash"><span class="tut-app-topo">Notas · 2026.2</span>
+                <span class="tut-linha"><b></b><i>7,5</i><i>6,0</i><i>8,0</i></span>
+                <span class="tut-linha"><b></b><i>8,0</i><i>8,5</i><i>9,0</i></span>
+                <span class="tut-linha"><b></b><i>5,0</i><i>4,0</i><i>6,0</i></span>
+                <span class="tut-linha"><b></b><i>9,0</i><i>8,0</i><i>10</i></span></div>
+            </div>
+            <div class="tut-texto">
+              <span class="tut-num">Passo 2 de 4</span>
+              <h3>Tire o print da tela</h3>
+              <ul class="tut-dicas">
+                <li><b>Android:</b> aperte <kbd>Liga</kbd> + <kbd>Volume −</kbd> juntos.</li>
+                <li><b>iPhone:</b> aperte o <kbd>botão lateral</kbd> + <kbd>Volume +</kbd> juntos.</li>
+              </ul>
+              <p>Deixe todas as matérias aparecendo. Se não couberem, as que faltarem dá para adicionar à mão depois.</p>
+            </div>
+          </li>
+
+          <li class="tut-passo" data-n="3">
+            <div class="tut-fone" aria-hidden="true">
+              <div class="tut-tela tut-tela-calc">
+                <span class="tut-calc-media"><small>Média geral</small>—</span>
+                <span class="tut-calc-botao">Importar print</span>
+                <span class="tut-galeria"><i></i><i class="tut-escolhido"></i><i></i><i></i><i></i><i></i></span>
+              </div>
+            </div>
+            <div class="tut-texto">
+              <span class="tut-num">Passo 3 de 4</span>
+              <h3>Envie o print aqui</h3>
+              <p>Toque em <b>Importar print</b> e escolha a imagem na galeria. No computador, dá para arrastar a imagem ou colar com <kbd>Ctrl</kbd>+<kbd>V</kbd>.</p>
+            </div>
+          </li>
+
+          <li class="tut-passo" data-n="4">
+            <div class="tut-fone" aria-hidden="true">
+              <div class="tut-tela tut-tela-calc">
+                <span class="tut-revisao"><b></b><i>7,5</i><i>6,0</i><i>8,0</i></span>
+                <span class="tut-revisao"><b></b><i>8,0</i><i>8,5</i><i>9,0</i></span>
+                <span class="tut-revisao tut-corrigir"><b></b><i>5,0</i><i>4,0</i><i>6,0</i></span>
+                <span class="tut-revisao"><b></b><i>9,0</i><i>8,0</i><i>10</i></span>
+                <span class="tut-calc-botao tut-preencher">Preencher</span>
+              </div>
+            </div>
+            <div class="tut-texto">
+              <span class="tut-num">Passo 4 de 4</span>
+              <h3>Confira e preencha</h3>
+              <p>Aparece uma tabela com o que foi lido. Corrija o que estiver errado, tire as linhas que não são matérias e toque em <b>Preencher</b>.</p>
+              <p class="tut-privado">A leitura acontece no seu aparelho. O print não é enviado para nenhum servidor.</p>
+            </div>
+          </li>
+        </ol>
+
+        <div class="tut-rodape">
+          <div class="tut-pontos" role="group" aria-label="Passos do tutorial">
+            <button type="button" data-ir="1" aria-label="Passo 1"></button>
+            <button type="button" data-ir="2" aria-label="Passo 2"></button>
+            <button type="button" data-ir="3" aria-label="Passo 3"></button>
+            <button type="button" data-ir="4" aria-label="Passo 4"></button>
+          </div>
+          <span class="spacer"></span>
+          <button type="button" id="tutorial-voltar" class="ghost">Voltar</button>
+          <button type="button" id="tutorial-proximo" class="primary">Próximo</button>
+        </div>
+      </div>
+    </dialog>
+
     <dialog id="import-dialog" class="dialog dialog-import" aria-labelledby="import-titulo" data-etapa="inicio">
       <div class="dialog-body">
         <div class="dialog-head">
@@ -337,6 +432,14 @@
           </label>
 
           <p class="import-erro" id="import-erro" role="alert"></p>
+
+          <button type="button" class="tutorial-link" id="tutorial-abrir">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/>
+              <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01"/>
+            </svg>
+            Como tirar o print?
+          </button>
         </div>
 
         <!-- Etapa 2: lendo -->
@@ -363,6 +466,6 @@
       </div>
     </dialog>
 
-    <script src="calculadora-media-facens.js?v=15" defer></script>
+    <script src="calculadora-media-facens.js?v=16" defer></script>
   </body>
 </html>

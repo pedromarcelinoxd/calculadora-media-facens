@@ -2287,6 +2287,372 @@ kbd {
   }
 }
 
+/* ---------- Tutorial do print ---------- */
+
+.tutorial-link {
+  display: inline-flex;
+  align-items: center;
+  justify-self: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 12px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 13.5px;
+}
+
+.tutorial-link svg {
+  width: 17px;
+  height: 17px;
+}
+
+.tutorial-link:hover {
+  background: var(--accent-soft);
+}
+
+.dialog-tutorial {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.tut-passos {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tut-passo {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+  min-height: 290px;
+  animation: tut-entra 0.25s ease-out;
+}
+
+.tut-passo[hidden] {
+  display: none;
+}
+
+@keyframes tut-entra {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+
+.tut-texto {
+  display: grid;
+  gap: 8px;
+}
+
+.tut-num {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tut-texto h3 {
+  margin: 0;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.tut-texto p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.tut-texto p b,
+.tut-dicas b {
+  color: var(--fg);
+}
+
+.tut-dicas {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.tut-privado {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--ok-soft);
+  color: var(--fg) !important;
+  font-size: 12.5px !important;
+}
+
+/* o celular desenhado */
+.tut-fone {
+  position: relative;
+  width: 150px;
+  aspect-ratio: 9 / 18;
+  padding: 7px;
+  border-radius: 26px;
+  background: #1a2130;
+  box-shadow: 0 18px 40px -20px rgb(0 0 0 / 0.5), inset 0 0 0 1px rgb(255 255 255 / 0.08);
+}
+
+:root[data-theme="dark"] .tut-fone {
+  background: #2a3242;
+}
+
+.tut-tela {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  height: 100%;
+  padding: 14px 10px;
+  border-radius: 20px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.tut-app-topo {
+  margin-bottom: 4px;
+  color: var(--fg);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.tut-linha,
+.tut-revisao {
+  display: grid;
+  grid-template-columns: 1fr repeat(3, 22px);
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 7px;
+  background: var(--field);
+}
+
+.tut-linha b,
+.tut-revisao b {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--muted);
+  opacity: 0.5;
+}
+
+.tut-linha i,
+.tut-revisao i {
+  color: var(--fg);
+  font: 600 8.5px var(--mono);
+  font-style: normal;
+  text-align: center;
+}
+
+/* passo 2: botões laterais piscando e o "flash" do print */
+.tut-botao {
+  position: absolute;
+  right: -3px;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+  animation: tut-aperta 2.4s infinite;
+}
+
+.tut-botao-a {
+  top: 56px;
+  height: 30px;
+}
+
+.tut-botao-b {
+  top: 96px;
+  height: 22px;
+}
+
+@keyframes tut-aperta {
+  0%, 30%, 100% {
+    transform: none;
+    box-shadow: none;
+  }
+  35%, 45% {
+    transform: translateX(-2px);
+    box-shadow: 0 0 0 4px var(--accent-soft);
+  }
+}
+
+.tut-flash {
+  position: relative;
+}
+
+.tut-flash::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  animation: tut-flash 2.4s infinite;
+}
+
+@keyframes tut-flash {
+  0%, 44%, 70%, 100% {
+    opacity: 0;
+  }
+  48% {
+    opacity: 0.85;
+  }
+}
+
+/* passos 3 e 4: a calculadora */
+.tut-calc-media {
+  display: grid;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--field);
+  color: var(--fg);
+  font: 700 18px var(--mono);
+}
+
+.tut-calc-media small {
+  color: var(--muted);
+  font: 600 7.5px var(--sans);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.tut-calc-botao {
+  display: grid;
+  place-items: center;
+  height: 24px;
+  border: 1px solid var(--accent);
+  border-radius: 7px;
+  color: var(--accent);
+  font-size: 9.5px;
+  font-weight: 700;
+  animation: tut-pulsa 2.4s infinite;
+}
+
+.tut-preencher {
+  margin-top: auto;
+  background: var(--accent);
+  color: #fff;
+}
+
+:root[data-theme="dark"] .tut-preencher {
+  color: #0b0e13;
+}
+
+@keyframes tut-pulsa {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--accent-soft);
+  }
+  50% {
+    box-shadow: 0 0 0 5px var(--accent-soft);
+  }
+}
+
+.tut-galeria {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin-top: auto;
+}
+
+.tut-galeria i {
+  aspect-ratio: 9 / 16;
+  border-radius: 4px;
+  background: var(--field);
+}
+
+.tut-galeria .tut-escolhido {
+  background: linear-gradient(var(--track) 0 18%, var(--field) 18%);
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.tut-corrigir i:nth-of-type(2) {
+  border-radius: 3px;
+  outline: 1.5px solid var(--warn);
+}
+
+/* rodapé com pontinhos */
+.tut-rodape {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tut-rodape .spacer {
+  flex: 1;
+}
+
+.tut-pontos {
+  display: flex;
+  gap: 2px;
+}
+
+.tut-pontos button {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: grid;
+  place-items: center;
+}
+
+.tut-pontos button::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 99px;
+  background: var(--line);
+  transition: width 0.2s, background 0.2s;
+}
+
+.tut-pontos button[aria-current="true"]::before {
+  width: 18px;
+  background: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .tut-passo {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    gap: 18px;
+    min-height: 0;
+  }
+
+  .tut-fone {
+    width: 128px;
+  }
+
+  .tut-linha,
+  .tut-revisao {
+    grid-template-columns: minmax(12px, 1fr) repeat(3, 17px);
+    gap: 3px;
+    padding: 5px;
+  }
+
+  .tut-texto {
+    width: 100%;
+  }
+
+  .tut-rodape button.primary,
+  .tut-rodape button.ghost {
+    height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tut-passo,
+  .tut-botao,
+  .tut-flash::after,
+  .tut-calc-botao {
+    animation: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
