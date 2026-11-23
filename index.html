@@ -20,7 +20,7 @@
       href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@500;600&amp;display=swap"
       rel="stylesheet"
     >
-    <link rel="stylesheet" href="calculadora-media-facens.css?v=14">
+    <link rel="stylesheet" href="calculadora-media-facens.css?v=15">
     <script>
       // Abre sempre no tema do sistema, antes de desenhar a página (sem piscar).
       document.documentElement.dataset.theme =
@@ -34,6 +34,12 @@
         <div class="appbar">
           <img class="brand" src="facens-logo.png" alt="Facens">
           <div class="appbar-acoes">
+            <button type="button" id="open-semestres" class="pesos-btn" aria-haspopup="dialog" aria-label="Semestres e backup" title="Semestres e backup">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>
+              </svg>
+              <span>Semestres</span>
+            </button>
             <button type="button" id="open-pesos" class="pesos-btn" aria-haspopup="dialog" aria-label="Pesos das notas" title="Pesos das notas">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
                 <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/>
@@ -118,6 +124,17 @@
         </div>
       </section>
 
+      <div class="lista-controles" role="group" aria-label="Organizar matérias">
+        <div class="segmentado" role="group" aria-label="Ordem das matérias">
+          <button type="button" data-ordem="minha" aria-pressed="true">Minha ordem</button>
+          <button type="button" data-ordem="prioridade" aria-pressed="false">Prioridade</button>
+        </div>
+        <button type="button" id="foco" class="chip-toggle" aria-pressed="false">Só pendentes</button>
+        <span class="dica-teclado"><kbd>Enter</kbd> próximo campo · <kbd>↑</kbd><kbd>↓</kbd> muda 0,5</span>
+      </div>
+
+      <p class="foco-vazio" id="foco-vazio" hidden>Nada pendente: as matérias com nota já estão aprovadas.</p>
+
       <section
         class="subjects"
         id="subjects"
@@ -149,6 +166,53 @@
         </div>
       </div>
     </footer>
+
+    <dialog id="semestres-dialog" class="dialog dialog-semestres" aria-labelledby="semestres-titulo">
+      <div class="dialog-body">
+        <div class="dialog-head">
+          <h2 id="semestres-titulo">Semestres</h2>
+          <button type="button" class="icon-btn" id="semestres-fechar" aria-label="Fechar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="cr">
+          <span class="resumo-label">Média do curso</span>
+          <strong id="cr-valor">—</strong>
+          <small id="cr-detalhe"></small>
+        </div>
+
+        <div class="sem-grafico" id="sem-grafico" aria-label="Média de cada semestre" hidden></div>
+
+        <ul class="sem-lista" id="sem-lista"></ul>
+
+        <div class="sem-fechar">
+          <label for="sem-nome">Fechar o semestre atual</label>
+          <p class="sub">Guarda as médias das matérias completas no histórico e começa um semestre vazio.</p>
+          <div class="sem-fechar-linha">
+            <input type="text" id="sem-nome" maxlength="20" autocomplete="off" aria-label="Nome do semestre">
+            <button type="button" id="sem-fechar-atual" class="primary">Fechar semestre</button>
+          </div>
+          <p class="sem-erro" id="sem-erro" role="alert"></p>
+        </div>
+
+        <div class="backup">
+          <div>
+            <b>Backup</b>
+            <small>Leve as notas e o histórico para outro aparelho.</small>
+          </div>
+          <div class="backup-botoes">
+            <button type="button" id="backup-exportar">Exportar</button>
+            <label class="botao-arquivo">
+              Importar
+              <input type="file" id="backup-arquivo" accept=".json,application/json">
+            </label>
+          </div>
+        </div>
+      </div>
+    </dialog>
 
     <dialog id="pesos-dialog" class="dialog" aria-labelledby="pesos-titulo">
       <form method="dialog" id="pesos-form" novalidate>
@@ -299,6 +363,6 @@
       </div>
     </dialog>
 
-    <script src="calculadora-media-facens.js?v=14" defer></script>
+    <script src="calculadora-media-facens.js?v=15" defer></script>
   </body>
 </html>

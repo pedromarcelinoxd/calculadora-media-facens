@@ -42,8 +42,13 @@
     af: dados.af ?? "",
     as: dados.as ?? "", // Avaliação Substitutiva
     asAlvo: IDS.includes(dados.asAlvo) ? dados.asAlvo : "auto", // nota que a AS substitui
+    faltas: dados.faltas ?? "",
+    aulas: dados.aulas ?? "",
     sim: null, // valor do simulador da AF (não é salvo)
   });
+
+  // Frequência mínima para não reprovar por falta (75% das aulas).
+  const FREQUENCIA_MINIMA = 0.75;
 
   const pesosValidos = (p) =>
     p &&
@@ -86,7 +91,8 @@
 
   function exportarDados() {
     return {
-      subjects: estado.materias.map(({ name, ac1, ac2, ag, af, as, asAlvo }) => ({ name, ac1, ac2, ag, af, as, asAlvo })),
+      subjects: estado.materias.map(({ name, ac1, ac2, ag, af, as, asAlvo, faltas, aulas }) =>
+        ({ name, ac1, ac2, ag, af, as, asAlvo, faltas, aulas })),
       meta: estado.meta,
       pesos: estado.pesos,
     };
@@ -215,33 +221,63 @@
         estado: "bad",
         grupo: "bad",
         texto: "Faça a AS",
+        precisa: as.necessaria,
         aviso: `Precisa de ${formatar(as.necessaria)} na AS`,
       };
     }
     
-    const antesDaAF = notas.ac1 !== null && notas.ac2 !== null && notas.ag !== null;
+    if (!preenchidas) return r;
 
-    if (notas.af === null && antesDaAF) {
-      const necessaria = P.af > 0 ? Math.max(0, (meta - media) / P.af) : (media >= meta ? 0 : Infinity);
-      const sim = P.af > 0 ? { necessaria } : null;
+    // Notas que ainda faltam: quanto precisa tirar (a mesma nota em todas) para chegar na meta.
+    const faltam = IDS.filter((id) => notas[id] === null && P[id] > 0);
+    const pesoFalta = faltam.reduce((t, id) => t + P[id], 0);
+    const cenarios = { pior: media, melhor: media + 10 * pesoFalta };
+    const necessaria = pesoFalta > 0 ? Math.max(0, (meta - media) / pesoFalta) : (media >= meta - 1e-9 ? 0 : Infinity);
+    const soAF = faltam.length === 1 && faltam[0] === "af";
+    const base = { ...r, cenarios, precisa: necessaria, sim: soAF ? { necessaria } : null };
 
-      if (necessaria > 10) {
-        return { ...r, estado: "bad", grupo: "bad", texto: "Meta fora de alcance", aviso: `Máximo: ${formatar(media + 10 * P.af)}`, sim };
-      }
-      if (necessaria === 0) {
-        return { ...r, estado: "ok", grupo: "ok", texto: "Meta já garantida", sim };
-      }
-      return {
-        ...r,
-        estado: "warn",
-        grupo: "warn",
-        texto: "Falta a AF",
-        aviso: `Precisa de ${formatar(Math.ceil(necessaria * 100) / 100)} na AF`,
-        sim,
-      };
+    if (necessaria > 10) {
+      return { ...base, estado: "bad", grupo: "bad", texto: "Meta fora de alcance", aviso: `Máximo: ${formatar(cenarios.melhor)}` };
+    }
+    if (necessaria === 0) {
+      return { ...base, estado: "ok", grupo: "ok", texto: "Meta já garantida" };
     }
 
-    return { ...r, grupo: preenchidas ? "andamento" : "vazia" };
+    const precisa = formatar(Math.ceil(necessaria * 100) / 100);
+    if (soAF) {
+      return { ...base, estado: "warn", grupo: "warn", texto: "Falta a AF", aviso: `Precisa de ${precisa} na AF` };
+    }
+
+    const nomes = faltam.map((id) => ROTULOS[id]);
+    const quais = nomes.length > 1 ? `${nomes.slice(0, -1).join(", ")} e ${nomes.at(-1)}` : nomes[0];
+    return {
+      ...base,
+      grupo: "andamento",
+      texto: "Em andamento",
+      aviso: `Média ${precisa} em ${quais}`,
+    };
+  }
+
+  /** Faltas: limite de 25% das aulas. Devolve null quando a matéria não tem as aulas preenchidas. */
+  function avaliarFaltas(materia) {
+    const aulas = Number(String(materia.aulas).trim());
+    const faltas = String(materia.faltas).trim() === "" ? 0 : Number(String(materia.faltas).trim());
+    const aulasOk = Number.isInteger(aulas) && aulas > 0;
+    const faltasOk = Number.isInteger(faltas) && faltas >= 0;
+    if (!aulasOk) return { invalidaAulas: String(materia.aulas).trim() !== "", invalidaFaltas: !faltasOk };
+    if (!faltasOk) return { invalidaFaltas: true };
+    const limite = Math.floor(aulas * (1 - FREQUENCIA_MINIMA));
+    return { faltas, aulas, limite, restam: limite - faltas, estourou: faltas > limite };
+  }
+
+  /** Avaliação completa: notas + faltas (reprovar por falta vence tudo). */
+  function avaliarMateria(materia, meta) {
+    const r = avaliar(materia, meta);
+    const f = avaliarFaltas(materia);
+    if (f.estourou) {
+      return { ...r, faltas: f, estado: "bad", grupo: "bad", texto: "Reprovado por falta", aviso: `${f.faltas} faltas · limite ${f.limite}`, sim: null };
+    }
+    return { ...r, faltas: f };
   }
 
   // ---------- Cards ----------
@@ -290,6 +326,16 @@
               >
             </div>
           `).join("")}
+        </div>
+
+        <p class="cenarios" data-out="cenarios" hidden></p>
+
+        <div class="faltas">
+          <label for="faltas-${id}">Faltas</label>
+          <input type="text" inputmode="numeric" id="faltas-${id}" data-field="faltas" placeholder="0" autocomplete="off" value="${escaparHTML(materia.faltas)}">
+          <span aria-hidden="true">de</span>
+          <input type="text" inputmode="numeric" data-field="aulas" placeholder="aulas" aria-label="Total de aulas da matéria" autocomplete="off" value="${escaparHTML(materia.aulas)}">
+          <span class="faltas-info" data-out="faltas"></span>
         </div>
 
         <div class="sim" data-out="sim" hidden>
@@ -361,13 +407,41 @@
     raiz.style.setProperty("--meta", `${meta * 10}%`);
 
     const resultados = estado.materias.map((materia, indice) => {
-      const r = avaliar(materia, meta);
+      const r = avaliarMateria(materia, meta);
       const card = cardDe(materia);
       if (!card) return r;
 
       const out = (nome) => card.querySelector(`[data-out="${nome}"]`);
 
+      // Comemora quando a matéria passa para "aprovado" por causa de uma nota digitada agora.
+      const antes = estadosAnteriores.get(materia.id);
+      if (animarAprovacao && antes !== undefined && antes !== "ok" && r.estado === "ok") comemorar(card);
+      estadosAnteriores.set(materia.id, r.estado);
+
       card.dataset.state = r.estado;
+      card.dataset.grupo = r.grupo;
+
+      // Cenários: o pior (zera o que falta) e o melhor (tira 10 em tudo que falta).
+      const cen = out("cenarios");
+      cen.hidden = !r.cenarios || r.grupo === "ok";
+      if (!cen.hidden) {
+        cen.innerHTML =
+          `Zerando o que falta: <strong>${formatar(r.cenarios.pior)}</strong> · Com 10 em tudo: <strong>${formatar(r.cenarios.melhor)}</strong>`;
+      }
+
+      // Faltas
+      const f = r.faltas;
+      card.querySelector('[data-field="faltas"]').classList.toggle("invalid", Boolean(f.invalidaFaltas));
+      card.querySelector('[data-field="aulas"]').classList.toggle("invalid", Boolean(f.invalidaAulas));
+      const info = out("faltas");
+      info.dataset.nivel = f.limite === undefined ? "" : f.estourou ? "bad" : f.restam <= Math.max(1, Math.floor(f.limite / 4)) ? "warn" : "ok";
+      info.textContent = f.limite === undefined
+        ? ""
+        : f.estourou
+          ? `passou ${f.faltas - f.limite} do limite`
+          : f.restam === 0
+            ? "no limite, nenhuma a mais"
+            : `pode faltar mais ${f.restam}`;
       card.setAttribute("aria-label", nomeDe(materia, indice));
       out("avg").textContent = formatar(r.media);
       out("bar").style.width = `${r.media * 10}%`;
@@ -440,8 +514,135 @@
     });
 
     atualizarResumo(resultados);
+    ultimosResultados = resultados;
+    // Reordenar enquanto alguém digita faria o card "fugir"; espera sair do card.
+    if (!lista.contains(document.activeElement)) organizar();
     return resultados;
   }
+
+  // ---------- Ordem de prioridade e modo foco ----------
+
+  const estadosAnteriores = new Map();
+  let animarAprovacao = false;
+  let ultimosResultados = [];
+
+  const CHAVE_PREFS = "calc-media-facens-prefs";
+  const prefs = (() => {
+    try {
+      return { ordem: "minha", foco: false, ...JSON.parse(localStorage.getItem(CHAVE_PREFS) || "{}") };
+    } catch {
+      return { ordem: "minha", foco: false };
+    }
+  })();
+  const salvarPrefs = () => {
+    try { localStorage.setItem(CHAVE_PREFS, JSON.stringify(prefs)); } catch { /* sem armazenamento */ }
+  };
+
+  // Quanto menor, mais acima: em risco, depende da AF, em andamento, vazia, aprovada.
+  const PESO_GRUPO = { bad: 0, warn: 1, andamento: 2, vazia: 3, ok: 4 };
+
+  function organizar() {
+    const cards = estado.materias.map((m, i) => ({ m, r: ultimosResultados[i], card: cardDe(m), i }));
+    const ordenados = [...cards].sort((a, b) =>
+      (PESO_GRUPO[a.r?.grupo] ?? 3) - (PESO_GRUPO[b.r?.grupo] ?? 3) ||
+      (b.r?.precisa ?? 0) - (a.r?.precisa ?? 0) ||
+      a.i - b.i);
+
+    ordenados.forEach(({ card }, posicao) => {
+      if (card) card.style.order = prefs.ordem === "prioridade" ? String(posicao) : "";
+    });
+
+    let visiveis = 0;
+    cards.forEach(({ card, r }) => {
+      if (!card) return;
+      const esconder = prefs.foco && (r?.grupo === "ok" || r?.grupo === "vazia");
+      card.hidden = esconder;
+      if (!esconder) visiveis++;
+    });
+    $("foco-vazio").hidden = !(prefs.foco && visiveis === 0);
+
+    document.querySelectorAll("[data-ordem]").forEach((b) =>
+      b.setAttribute("aria-pressed", String(b.dataset.ordem === prefs.ordem)));
+    $("foco").setAttribute("aria-pressed", String(prefs.foco));
+  }
+
+  document.querySelectorAll("[data-ordem]").forEach((b) => b.addEventListener("click", () => {
+    prefs.ordem = b.dataset.ordem;
+    salvarPrefs();
+    organizar();
+  }));
+
+  $("foco").addEventListener("click", () => {
+    prefs.foco = !prefs.foco;
+    salvarPrefs();
+    organizar();
+  });
+
+  // Saiu de um card: agora pode reorganizar.
+  lista.addEventListener("focusout", () => {
+    setTimeout(() => { if (!lista.contains(document.activeElement)) organizar(); }, 0);
+  });
+
+  // ---------- Comemoração ao aprovar ----------
+
+  const CORES_CONFETE = ["#22a45d", "#0057a3", "#00a9d6", "#e0961a", "#7ee8a5"];
+
+  function comemorar(card) {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    navigator.vibrate?.(18);
+    const camada = document.createElement("div");
+    camada.className = "confete";
+    camada.setAttribute("aria-hidden", "true");
+    for (let i = 0; i < 18; i++) {
+      const p = document.createElement("i");
+      const angulo = (Math.PI * 2 * i) / 18 + Math.random() * 0.4;
+      const distancia = 60 + Math.random() * 70;
+      p.style.setProperty("--x", `${Math.cos(angulo) * distancia}px`);
+      p.style.setProperty("--y", `${Math.sin(angulo) * distancia - 30}px`);
+      p.style.setProperty("--r", `${Math.round(Math.random() * 540 - 270)}deg`);
+      p.style.background = CORES_CONFETE[i % CORES_CONFETE.length];
+      camada.append(p);
+    }
+    card.append(camada);
+    setTimeout(() => camada.remove(), 1000);
+  }
+
+  // ---------- Atalhos de teclado ----------
+
+  const CAMPOS_NOTA = new Set([...IDS, "as"]);
+
+  /** Campos de texto na ordem em que aparecem na tela (respeita a ordem de prioridade). */
+  function camposEmOrdem() {
+    return [...lista.querySelectorAll(".card:not([hidden])")]
+      .map((card, i) => ({ card, i, ordem: Number(card.style.order || 0) }))
+      .sort((a, b) => a.ordem - b.ordem || a.i - b.i)
+      .flatMap(({ card }) => [...card.querySelectorAll('input[type="text"]')].filter((el) => el.offsetParent !== null));
+  }
+
+  lista.addEventListener("keydown", (e) => {
+    const campo = e.target.dataset?.field;
+    if (!campo || e.target.type !== "text") return;
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const campos = camposEmOrdem();
+      const proximo = campos[campos.indexOf(e.target) + (e.shiftKey ? -1 : 1)];
+      proximo?.focus();
+      proximo?.select();
+      return;
+    }
+
+    if ((e.key === "ArrowUp" || e.key === "ArrowDown") && (CAMPOS_NOTA.has(campo) || campo === "faltas" || campo === "aulas")) {
+      e.preventDefault();
+      const ehNota = CAMPOS_NOTA.has(campo);
+      const passo = (ehNota ? 0.5 : 1) * (e.key === "ArrowUp" ? 1 : -1);
+      const atual = Number(e.target.value.trim().replace(",", ".")) || 0;
+      let novo = Math.max(0, atual + passo);
+      if (ehNota) novo = Math.min(10, Math.round(novo * 2) / 2);
+      e.target.value = ehNota ? (Number.isInteger(novo) ? String(novo) : formatar1(novo)) : String(Math.round(novo));
+      e.target.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  });
 
   // ---------- Resumo do semestre ----------
 
@@ -492,7 +693,9 @@
       materia[campo] = e.target.value;
       salvar();
     }
+    animarAprovacao = campo !== "sim" && campo !== "name";
     atualizar();
+    animarAprovacao = false;
   });
 
   lista.addEventListener("click", (e) => {
@@ -596,6 +799,7 @@
     estado.materias.forEach((m) => {
       IDS.forEach((id) => { m[id] = ""; });
       m.as = "";
+      m.faltas = "";
       m.sim = null;
     });
     salvar();
@@ -714,7 +918,7 @@
   function gerarLink() {
     const d = exportarDados();
     const compacto = {
-      s: d.subjects.map((m) => [m.name, m.ac1, m.ac2, m.ag, m.af, m.as, m.asAlvo]),
+      s: d.subjects.map((m) => [m.name, m.ac1, m.ac2, m.ag, m.af, m.as, m.asAlvo, m.faltas, m.aulas]),
       m: d.meta,
       p: IDS.map((id) => d.pesos[id]),
     };
@@ -731,8 +935,8 @@
       if (!Array.isArray(c.s)) return null;
       return {
         subjects: c.s.map((linha) => {
-          const [name, ac1, ac2, ag, af, as, asAlvo] = linha.map((v) => String(v ?? "").slice(0, 50));
-          return { name, ac1, ac2, ag, af, as, asAlvo };
+          const [name, ac1, ac2, ag, af, as, asAlvo, faltas, aulas] = linha.map((v) => String(v ?? "").slice(0, 50));
+          return { name, ac1, ac2, ag, af, as, asAlvo, faltas, aulas };
         }),
         meta: String(c.m ?? "6,0").slice(0, 6),
         pesos: Array.isArray(c.p) ? Object.fromEntries(IDS.map((id, i) => [id, Number(c.p[i])])) : null,
@@ -1441,6 +1645,202 @@
   const marcarRolagem = () => appbar.classList.toggle("rolou", scrollY > 8);
   addEventListener("scroll", marcarRolagem, { passive: true });
   marcarRolagem();
+
+  // ---------- Histórico de semestres ----------
+
+  const CHAVE_HISTORICO = "calc-media-facens-historico";
+
+  function carregarHistorico() {
+    try {
+      const h = JSON.parse(localStorage.getItem(CHAVE_HISTORICO) || "[]");
+      return Array.isArray(h) ? h.filter(semestreValido) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function semestreValido(s) {
+    return s && typeof s.nome === "string" && Array.isArray(s.materias) &&
+      s.materias.every((m) => m && typeof m.name === "string" && Number.isFinite(m.media));
+  }
+
+  let historico = carregarHistorico();
+
+  function salvarHistorico() {
+    try { localStorage.setItem(CHAVE_HISTORICO, JSON.stringify(historico)); } catch { /* sem armazenamento */ }
+  }
+
+  const semestreSugerido = () => {
+    const hoje = new Date();
+    return `${hoje.getFullYear()}.${hoje.getMonth() < 6 ? 1 : 2}`;
+  };
+
+  const mediaDe = (materias) =>
+    materias.length ? materias.reduce((t, m) => t + m.media, 0) / materias.length : null;
+
+  function mostrarHistorico() {
+    const { meta } = lerMeta();
+    const todas = historico.flatMap((s) => s.materias);
+    const cr = mediaDe(todas);
+
+    $("cr-valor").textContent = cr === null ? "—" : formatar(cr);
+    $("cr-detalhe").textContent = cr === null
+      ? "Feche um semestre para começar o histórico"
+      : `${todas.length} ${todas.length === 1 ? "matéria" : "matérias"} em ${historico.length} ${historico.length === 1 ? "semestre" : "semestres"}`;
+
+    const grafico = $("sem-grafico");
+    grafico.hidden = historico.length === 0;
+    grafico.style.setProperty("--meta", `${meta * 10}%`);
+    grafico.innerHTML = historico.map((s) => {
+      const media = mediaDe(s.materias) ?? 0;
+      const passa = media >= meta - 1e-9;
+      return `
+        <div class="sem-barra" data-passa="${passa ? "sim" : "nao"}">
+          <span class="sem-barra-valor">${formatar(media)}</span>
+          <span class="sem-barra-trilho"><i style="height:${media * 10}%"></i></span>
+          <span class="sem-barra-nome">${escaparHTML(s.nome)}</span>
+        </div>`;
+    }).join("");
+
+    $("sem-lista").innerHTML = historico.length
+      ? [...historico].reverse().map((s) => {
+        const i = historico.indexOf(s);
+        const media = mediaDe(s.materias);
+        return `
+          <li>
+            <div>
+              <b>${escaparHTML(s.nome)}</b>
+              <small>${s.materias.map((m) => escaparHTML(m.name)).join(" · ")}</small>
+            </div>
+            <span class="sem-media">${media === null ? "—" : formatar(media)}</span>
+            <button type="button" class="icon-btn" data-remover-semestre="${i}" aria-label="Apagar ${escaparHTML(s.nome)}" title="Apagar semestre">${iconeX}</button>
+          </li>`;
+      }).join("")
+      : "";
+
+    $("sem-nome").value ||= semestreSugerido();
+  }
+
+  $("open-semestres").addEventListener("click", () => {
+    $("sem-nome").value = semestreSugerido();
+    $("sem-erro").textContent = "";
+    mostrarHistorico();
+    $("semestres-dialog").showModal();
+  });
+  $("semestres-fechar").addEventListener("click", () => $("semestres-dialog").close());
+
+  /** Abre o pop-up de confirmação por cima do de semestres e volta para ele depois. */
+  async function confirmarDentro(opcoes) {
+    const d = $("semestres-dialog");
+    d.close();
+    const ok = await confirmar(opcoes);
+    mostrarHistorico();
+    d.showModal();
+    return ok;
+  }
+
+  $("sem-fechar-atual").addEventListener("click", async () => {
+    const { meta } = lerMeta();
+    const fechadas = estado.materias
+      .map((m, i) => ({ m, i, r: avaliarMateria(m, meta) }))
+      .filter(({ r }) => r.completa)
+      .map(({ m, i, r }) => ({ name: nomeDe(m, i), media: Math.round(r.media * 100) / 100, texto: r.texto }));
+
+    if (!fechadas.length) {
+      $("sem-erro").textContent = "Complete as 4 notas de pelo menos uma matéria para fechar o semestre.";
+      return;
+    }
+
+    const nome = $("sem-nome").value.trim().slice(0, 20) || semestreSugerido();
+    const ok = await confirmarDentro({
+      titulo: `Fechar o semestre ${nome}?`,
+      texto: `${fechadas.length} ${fechadas.length === 1 ? "matéria completa vai" : "matérias completas vão"} para o histórico e a calculadora começa um semestre novo, vazio.`,
+      acao: "Fechar semestre",
+      icone: "importar",
+      perigo: false,
+    });
+    if (!ok) return;
+
+    historico.push({ nome, data: new Date().toISOString().slice(0, 10), materias: fechadas });
+    salvarHistorico();
+    aplicarDados({ meta: estado.meta, pesos: estado.pesos });
+    salvar();
+    iniciar();
+    $("sem-nome").value = "";
+    mostrarHistorico();
+  });
+
+  $("sem-lista").addEventListener("click", async (e) => {
+    const botao = e.target.closest("[data-remover-semestre]");
+    if (!botao) return;
+    const i = Number(botao.dataset.removerSemestre);
+    const s = historico[i];
+    if (!s) return;
+    const ok = await confirmarDentro({
+      titulo: `Apagar o semestre ${s.nome}?`,
+      texto: "As médias dele saem do histórico e da média do curso. Não dá para desfazer.",
+      acao: "Apagar",
+      icone: "lixeira",
+    });
+    if (!ok) return;
+    historico.splice(i, 1);
+    salvarHistorico();
+    mostrarHistorico();
+  });
+
+  // ---------- Backup (.json) ----------
+
+  $("backup-exportar").addEventListener("click", () => {
+    const dados = {
+      app: "calculadora-media-facens",
+      versao: 1,
+      exportado: new Date().toISOString(),
+      atual: exportarDados(),
+      historico,
+    };
+    const blob = new Blob([JSON.stringify(dados, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `media-facens-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+
+  $("backup-arquivo").addEventListener("change", async (e) => {
+    const arquivo = e.target.files?.[0];
+    e.target.value = "";
+    if (!arquivo) return;
+
+    let dados;
+    try {
+      dados = JSON.parse(await arquivo.text());
+    } catch {
+      dados = null;
+    }
+    if (!dados || dados.app !== "calculadora-media-facens" || !Array.isArray(dados.atual?.subjects)) {
+      $("sem-erro").textContent = "Esse arquivo não é um backup da calculadora.";
+      return;
+    }
+
+    const ok = await confirmarDentro({
+      titulo: "Restaurar este backup?",
+      texto: "As notas atuais e o histórico deste navegador serão trocados pelos do arquivo.",
+      acao: "Restaurar",
+      icone: "importar",
+    });
+    if (!ok) return;
+
+    aplicarDados(dados.atual);
+    historico = Array.isArray(dados.historico) ? dados.historico.filter(semestreValido) : [];
+    salvar();
+    salvarHistorico();
+    iniciar();
+    $("sem-erro").textContent = "";
+    mostrarHistorico();
+  });
 
   // ---------- Início ----------
 
