@@ -2644,6 +2644,58 @@ kbd {
   }
 }
 
+/* Importar no celular: a folha tem altura fixa, para não pular de tamanho
+   entre "escolher", "lendo" e "conferir"; os botões ficam presos embaixo. */
+@media (max-width: 640px) {
+  .dialog-import {
+    height: min(640px, 88dvh);
+  }
+
+  .dialog-import .dialog-body {
+    height: 100%;
+    max-height: none;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .dialog-import .import-etapa {
+    min-height: 0;
+  }
+
+  .dialog-import[data-etapa="inicio"] [data-para="inicio"] {
+    grid-template-rows: auto minmax(180px, 1fr) auto auto;
+  }
+
+  .dialog-import .import-zona {
+    align-content: center;
+    min-height: 0;
+  }
+
+  .dialog-import[data-etapa="lendo"] [data-para="lendo"] {
+    align-content: center;
+  }
+
+  .dialog-import[data-etapa="revisar"] [data-para="revisar"] {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .dialog-import #import-revisao {
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+
+  .dialog-import .import-tabela {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .dialog-import [data-para="revisar"] .dialog-actions {
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tut-passo,
   .tut-botao,
