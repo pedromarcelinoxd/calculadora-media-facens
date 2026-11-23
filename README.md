@@ -80,14 +80,4 @@ icons/                        ícones do app
 facens-logo.png               logo
 ```
 
-## Ideias pra depois
-
-- Descobrir a regra certa da AS
-- Funcionar offline depois de instalado
-- Ler prints de outros formatos além do app da Facens
-
-Se achar algum bug ou tiver uma ideia, abre uma issue ou me chama.
-
----
-
 Feito por Pedro Henrique Marcelino.
